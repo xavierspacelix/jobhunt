@@ -9,9 +9,18 @@ User paste link di /jobs → detail lowongan muncul, bisa save.
 ## In Scope
 - POST /api/jobs/fetch-url {url}
 - Allowlist: glints.com, jobstreet.co.id/.com (reject other + SSRF block private IP)
-- fetch 10s timeout + cheerio parsers `lib/scrapers/glints.ts`, `jobstreet.ts` (pure)
+- Render: native fetch (10s, header browser) dulu; fallback ke local headless
+  browser (Playwright + Chromium) bila 403/Cloudflare. Parser murni cheerio
+  `lib/scrapers/glints.ts`, `jobstreet.ts` (JSON-LD JobPosting + meta)
 - Job dedup by sourceUrl, manual fallback form jika parse gagal
-- GET /api/jobs, /api/jobs/[id]
+- POST/GET /api/jobs (simpan/list), GET /api/jobs/[id]
+- UI /jobs: paste URL -> form terisi -> simpan + daftar tersimpan
+
+## Catatan Scope
+- Browserbase ditolak (tidak tersedia di Indonesia). Diganti local headless
+  browser (Playwright + Chromium lokal) — menyimpang dari aturan MVP
+  "no Playwright", disetujui user karena 403 anti-bot. Playwright tetap untuk
+  cron (Feature 08).
 
 ## Out Of Scope
 - Auto-scrape cron (Feature 08), Playwright

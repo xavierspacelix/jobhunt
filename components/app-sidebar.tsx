@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { BrandLogo } from "@/components/brand-logo"
 import {
   Sidebar,
@@ -28,7 +27,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
   { title: "Profil & CV", url: "/profile", icon: <FileTextIcon /> },
-  { title: "Lowongan", url: "#", icon: <SearchIcon />, disabled: true },
+  { title: "Lowongan", url: "/jobs", icon: <SearchIcon /> },
   {
     title: "Pelacak Lamaran",
     url: "#",
@@ -64,12 +63,6 @@ export function AppSidebar({
         <NavMain items={items} />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center justify-between gap-2 px-1 py-1">
-            <span className="text-xs text-muted-foreground">Tema</span>
-            <ThemeToggle />
-          </SidebarMenuItem>
-        </SidebarMenu>
         <NavUser
           user={{
             name: userEmail?.split("@")[0] ?? "Pengguna",

@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth"
 import { AppSidebar } from "@/components/app-sidebar"
-import { ProfileManager } from "@/components/profile-manager"
+import { JobFetcher } from "@/components/job-fetcher"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,16 +10,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { BriefcaseIcon } from "lucide-react"
 
-export default async function Page() {
-  const session = await auth()
-  const email = session?.user?.email ?? undefined
-
+export default function JobsPage() {
   return (
     <SidebarProvider>
-      <AppSidebar userEmail={email} />
+      <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
@@ -35,7 +32,7 @@ export default async function Page() {
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Profil &amp; CV</BreadcrumbPage>
+                  <BreadcrumbPage>Lowongan</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -44,9 +41,23 @@ export default async function Page() {
             <ThemeToggle />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-          <ProfileManager />
-        </div>
+        <main className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+          <section className="rounded-xl border border-border bg-card p-5 md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                  Lowongan
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Tempel URL Glints atau Jobstreet untuk mengambil detail
+                  lowongan, lalu simpan ke daftarmu.
+                </p>
+              </div>
+              <BriefcaseIcon className="size-10 text-accent" />
+            </div>
+          </section>
+          <JobFetcher />
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )
