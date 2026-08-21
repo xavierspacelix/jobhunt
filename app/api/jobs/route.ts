@@ -118,5 +118,17 @@ export const GET = auth(async (req) => {
     orderBy: { createdAt: "desc" },
     take: 200,
   })
-  return NextResponse.json({ jobs })
+
+  const matches = await prisma.match.findMany({
+    where: { user: { email } },
+    select: { jobId: true, score: true },
+  })
+  const scoreByJob = new Map(matches.map((m) => [m.jobId, m.score]))
+
+  const jobsWithScore = jobs.map((job) => ({
+    ...job,
+    matchScore: scoreByJob.get(job.id) ?? null,
+  }))
+
+  return NextResponse.json({ jobs: jobsWithScore })
 })

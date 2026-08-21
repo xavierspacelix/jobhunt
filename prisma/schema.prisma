@@ -36,6 +36,7 @@ model User {
 
   profile      Profile?
   applications Application[]
+  matches      Match[]
 }
 
 model Profile {
@@ -84,6 +85,7 @@ model Job {
   createdAt       DateTime   @default(now())
 
   applications Application[]
+  matches      Match[]
 }
 
 model Application {
@@ -94,6 +96,7 @@ model Application {
   matchScore      Int?
   matchedSkills   String[]
   missingSkills   String[]
+  matchCacheKey   String?
   coverLetter     String?
   notes           String?
   appliedAt       DateTime?
@@ -105,6 +108,24 @@ model Application {
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   emailLogs EmailLog[]
+
+  @@unique([userId, jobId])
+}
+
+model Match {
+  id             String   @id @default(cuid())
+  userId         String
+  jobId          String
+  score          Int
+  matchedSkills  String[]
+  missingSkills  String[]
+  source         String?
+  cacheKey       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId])
 }

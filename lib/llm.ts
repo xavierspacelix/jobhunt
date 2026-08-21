@@ -519,3 +519,36 @@ export async function extractCv(text: string): Promise<{
   }
   return { data: heuristicCv(text), source: "heuristic" }
 }
+
+export async function callChatJson(system: string, user: string): Promise<unknown> {
+  const baseUrl = process.env.LLM_BASE_URL!.replace(/\/$/, "")
+  const apiKey = process.env.LLM_API_KEY!
+  const model = process.env.LLM_MODEL ?? "gpt-4o-mini"
+
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  })
+
+  if (!res.ok) {
+    throw new Error(`LLM request failed: ${res.status}`)
+  }
+
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[]
+  }
+  const content = json.choices?.[0]?.message?.content ?? "{}"
+  return JSON.parse(content)
+}

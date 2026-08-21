@@ -19,7 +19,7 @@
 | OD-006 | PDF storage: Supabase Storage vs local /tmp | 02 | open |
 | OD-007 | Cover letter tone template (formal vs casual ID) | 06 | open |
 | OD-008 | Kanban lib: dnd-kit vs pragmatic-drag | 04 | open |
-| OD-009 | Rate limit thresholds for AI scoring | 05 | open |
+| OD-009 | Rate limit thresholds for AI scoring | 05 | closed | Resolved: 10 req/min per user (fixed window, in-memory) |
 | OD-010 | Cron schedule & keyword strategy for Fase 3 | 08 | deferred |
 
 ## Deferred Beyond MVP

@@ -19,8 +19,10 @@ import {
   ListChecksIcon,
   Trash2Icon,
   EyeIcon,
+  SparklesIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MatchDialog } from "@/components/match-dialog"
 
 type Source = "GLINTS" | "JOBSTREET"
 
@@ -55,7 +57,7 @@ interface Draft {
   skills: string[]
   externalJobId: string
   shareToken: string
-  companyId: string
+  companyRefId: string
   companyDetails: CompanyDetails | null
 }
 
@@ -80,6 +82,7 @@ interface SavedJob {
   shareToken?: string | null
   companyRefId?: string | null
   companyDetails?: CompanyDetails | null
+  matchScore?: number | null
 }
 
 function SourceBadge({ source }: { source: Source }) {
@@ -95,6 +98,12 @@ function SourceBadge({ source }: { source: Source }) {
       {source === "GLINTS" ? "Glints" : "Jobstreet"}
     </span>
   )
+}
+
+function scoreColor(score: number): string {
+  if (score >= 70) return "var(--color-success)"
+  if (score >= 40) return "var(--color-warning)"
+  return "var(--color-destructive)"
 }
 
 function Row({
@@ -217,7 +226,7 @@ export function JobFetcher() {
         skills: data.skills ?? [],
         externalJobId: data.externalJobId ?? "",
         shareToken: data.shareToken ?? "",
-        companyId: data.companyId ?? "",
+        companyRefId: data.companyRefId ?? "",
         companyDetails: data.companyDetails ?? null,
       })
     } catch {
@@ -252,7 +261,7 @@ export function JobFetcher() {
           skills: draft.skills,
           externalJobId: draft.externalJobId || undefined,
           shareToken: draft.shareToken || undefined,
-          companyRefId: draft.companyId || undefined,
+          companyRefId: draft.companyRefId || undefined,
           companyDetails: draft.companyDetails || undefined,
         }),
       })
@@ -307,7 +316,7 @@ export function JobFetcher() {
     ? [
         { label: "Title", value: draft.title },
         { label: "Company", value: draft.company },
-        { label: "Company ID", value: draft.companyId },
+        { label: "Company ID", value: draft.companyRefId },
         { label: "Job ID", value: draft.externalJobId },
         { label: "Share Token", value: draft.shareToken },
         { label: "Salary", value: draft.salary },
@@ -481,13 +490,25 @@ export function JobFetcher() {
                 key={job.id}
                 className="rounded-xl border border-border bg-card p-4"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">
                         {job.title}
                       </span>
                       <SourceBadge source={job.source} />
+                      {job.matchScore != null && (
+                        <span
+                          className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                          style={{
+                            color: scoreColor(job.matchScore),
+                            borderColor: scoreColor(job.matchScore),
+                            backgroundColor: `color-mix(in srgb, ${scoreColor(job.matchScore)} 12%, transparent)`,
+                          }}
+                        >
+                          {job.matchScore}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {[job.company, job.location].filter(Boolean).join(" · ") ||
@@ -501,7 +522,7 @@ export function JobFetcher() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {trackedIds.includes(job.id) ? (
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <ListChecksIcon className="size-3.5" />
@@ -538,6 +559,19 @@ export function JobFetcher() {
                     >
                       <EyeIcon className="size-4" />
                     </Button>
+                    <MatchDialog
+                      jobId={job.id}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-indigo-600 hover:text-indigo-600"
+                        >
+                          <SparklesIcon className="size-3.5" />
+                          Cek
+                        </Button>
+                      }
+                    />
                     {confirmDeleteId === job.id ? (
                       <div className="flex items-center gap-1">
                         <Button
@@ -573,8 +607,8 @@ export function JobFetcher() {
                       </Button>
                     )}
                   </div>
-                </div>
-              </li>
+                 </div>
+                 </li>
             ))}
           </ul>
         )}
@@ -668,7 +702,7 @@ function JobDetailSheet({
                 </p>
               </Section>
 
-              {cd && companyRows.some((r) => r.value) && (
+                {cd && companyRows.some((r) => r.value) && (
                 <Section title="Company Details">
                   <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                     {companyRows.map((r) => (
