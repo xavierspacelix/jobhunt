@@ -49,8 +49,8 @@ export function parseGlints(html: string, rawUrl?: string): ParsedFields {
   const title = blank(root.find("h1").first().text())
   if (title) dom.title = title
 
-  let companyLink = root.find('h1 + a[href*="/companies/"]')
-  if (!companyLink.length) companyLink = root.find('a[href*="/companies/"]')
+  let companyLink = root.find('h1 + a[href*="/companies/"]').first()
+  if (!companyLink.length) companyLink = root.find('a[href*="/companies/"]').first()
   const company = blank(companyLink.text())
   if (company) dom.company = company
   const companyUrl = blank(companyLink.attr("href"))
