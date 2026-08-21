@@ -100,6 +100,37 @@ function extractSkills(text: string): string[] {
   return Array.from(found);
 }
 
+const MONTHS =
+  "jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember";
+
+const PERIOD_RE = new RegExp(
+  `(?:(?:${MONTHS})[ .]*)?\\d{4}\\s*(?:[-–—]|s\\.?d\\.?|to|until)?\\s*(?:(?:(?:${MONTHS})[ .]*)?\\d{4}|present|now|sekarang|current|saat ini)`,
+  "i",
+);
+
+function dedupeLines(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/\s+/g, " ").trim();
+    if (!line) continue;
+    const key = line.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(line);
+  }
+  return out;
+}
+
+function cleanResidue(line: string, period: string): string {
+  return line
+    .replace(period, "")
+    .replace(/[()[\]{}]/g, " ")
+    .replace(/^[\s\-–—,.:|]+|[\s\-–—,.:|]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function heuristicCv(text: string): CvData {
   const skills = extractSkills(text);
 
@@ -110,15 +141,35 @@ export function heuristicCv(text: string): CvData {
   let summary = paragraphs[0] ?? text.replace(/\s+/g, " ").trim().slice(0, 300);
   if (summary.length > 600) summary = summary.slice(0, 600).trim() + "…";
 
-  const yearRegex = /\b(19|20)\d{2}\b/i;
-  const experience = text
-    .split(/\r?\n/)
-    .map((l) => l.replace(/\s+/g, " ").trim())
-    .filter((l) => l.length > 4 && yearRegex.test(l))
-    .slice(0, 6)
-    .map((line) => ({
-      period: line.length > 140 ? line.slice(0, 140).trim() + "…" : line,
-    }));
+  const lines = dedupeLines(text);
+  const experience: ExperienceEntry[] = [];
+  const seenExp = new Set<string>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(PERIOD_RE);
+    if (!match) continue;
+    const period = match[0].replace(/\s+/g, " ").trim();
+    if (!period) continue;
+
+    let role = cleanResidue(line, period);
+    if (!role) {
+      for (let j = i - 1; j >= 0; j--) {
+        if (lines[j].match(PERIOD_RE)) continue;
+        const candidate = cleanResidue(lines[j], "");
+        if (candidate) {
+          role = candidate;
+          break;
+        }
+      }
+    }
+
+    const key = `${role}|${period}`.toLowerCase();
+    if (seenExp.has(key)) continue;
+    seenExp.add(key);
+    experience.push({ role: role || undefined, period });
+    if (experience.length >= 10) break;
+  }
 
   return { skills, summary, experience };
 }

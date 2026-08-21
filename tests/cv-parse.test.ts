@@ -43,6 +43,19 @@ test("heuristicCv produces a non-empty summary", () => {
   assert.ok(data.summary.length > 0);
 });
 
+test("heuristicCv parses role + period and dedupes repeated lines", () => {
+  const cv = `PT Maju Jaya
+Backend Developer
+Mar 2024 - Aug 2025
+Mar 2024 - Aug 2025
+Oct 2023 - Mar 2024`;
+  const data = heuristicCv(cv);
+  assert.equal(data.experience.length, 2, "duplicated date line should be deduped");
+  const first = data.experience[0];
+  assert.ok(first.role && /Backend Developer/i.test(first.role), "role should come from the preceding line");
+  assert.ok(first.period && /2024/.test(first.period));
+});
+
 test("extractCv uses heuristic fallback when LLM env is absent", async () => {
   const prevKey = process.env.LLM_API_KEY;
   const prevUrl = process.env.LLM_BASE_URL;
