@@ -23,13 +23,15 @@ User paste link di /jobs → detail lowongan muncul, bisa save.
   cron (Feature 08).
 
 ## Out Of Scope
-- Auto-scrape cron (Feature 08), Playwright
+- Auto-scrape cron (Feature 08)
 
 ## Acceptance Criteria
-- [ ] Paste URL Glints valid -> title/company/description terisi
-- [ ] Jobstreet sama
-- [ ] Unknown domain rejected 400
-- [ ] Parser unit tests dengan fixture HTML
+- [x] Paste URL Glints valid -> title/company/location/salary/description terisi
+- [x] Jobstreet sama (termasuk gaji dari teks halaman bila tak ada di JSON-LD)
+- [x] Salary terdeteksi dari JSON-LD `baseSalary` maupun teks DOM (Rp/IDR/$/juta)
+- [x] Description mempertahankan paragraph (bukan flat jadi satu baris)
+- [x] Unknown domain rejected 400
+- [x] Parser unit tests dengan fixture HTML (11 tests)
 
 ## Dependencies
 - 01
