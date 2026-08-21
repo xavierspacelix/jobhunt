@@ -5,9 +5,9 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 ## Current Status
 
 - Phase: Phase 1 - Foundation
-- In progress: 05 - AI Matching Score
-- Last completed: 04 - Application Tracker (Kanban)
-- Next: 06 - Email & Cover Letter
+- In progress: 06 - Email & Cover Letter
+- Last completed: 05 - AI Matching Score
+- Next: 07 - Dashboard & Analytics
 
 ## Features
 
@@ -17,8 +17,8 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 | 02 | CV Upload & Parse (PDF) | `features/02-cv-upload-parse.md` | complete |
 | 03 | Job Fetch Paste URL (Glints & Jobstreet) | `features/03-job-fetch.md` | complete |
 | 04 | Application Tracker (Kanban) | `features/04-tracker-kanban.md` | complete |
-| 05 | AI Matching Score | `features/05-ai-matching.md` | planned |
-| 06 | Email & Cover Letter | `features/06-email-coverletter.md` | planned |
+| 05 | AI Matching Score | `features/05-ai-matching.md` | complete |
+| 06 | Email & Cover Letter | `features/06-email-coverletter.md` | in progress |
 | 07 | Dashboard & Analytics | `features/07-dashboard-analytics.md` | planned |
 | 08 | Cron Scraper & Recommendations | `features/08-cron-scraper.md` | planned |
 
