@@ -1,6 +1,6 @@
 # UI Tokens — JobHunter
 
-> **Source of Truth:** `design-system/jobhunter/MASTER.md` (generated via `ui-ux-pro-max` skill, variance 5 / motion 4 / density 8, Style: Flat Design).
+> **Source of Truth:** `design-system/jobhunter/MASTER.md` (Soft Warm Minimal — variance 4 / motion 3 / density 6).
 > Tokens di bawah adalah adaptasi OKLCH + shadcn untuk implementasi Next.js. Jangan pakai raw hex/palette di components.
 
 ## Design System Master
@@ -11,31 +11,31 @@
 
 Perbedaan dari `../nerd/prototype` (DILARANG copy):
 - Nerd: neutral OKLCH + green lime `--primary oklch(0.841 0.238 128.85)`, dense utility, mono-heavy.
-- JobHunter: **professional blue `#0369A1`** + success green `#16A34A`, flat dashboard, card-focused, funnel pattern. Font: Plus Jakarta Sans (bukan Fira). Palette, font, dan layout baru.
+- JobHunter: **Soft Warm Minimal** — cream canvas `#FAF8F4` + muted indigo accent `#4F46E5`, warm panel `#F1EBE0`, rounded-2xl, soft shadow. Font: Inter. Friendly & calm, bukan flat-blue tajam.
 
 ## Typography
 
-- Heading: **Plus Jakarta Sans** (dari MASTER — friendly, modern, SaaS)
-- Body: **Plus Jakarta Sans**
+- Heading: **Inter** (dari MASTER — minimal, clean, swiss, neutral, professional)
+- Body: **Inter**
 - Mono: **JetBrains Mono** (untuk skor, gaji, log)
-- Alternatif: `Inter` jika Google Fonts gagal — jangan download font lain tanpa update MASTER.
+- Alternatif: `system-ui` jika Google Fonts gagal — jangan download font lain tanpa update MASTER.
 
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
---font-sans: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+--font-sans: "Inter", system-ui, sans-serif;
 --font-mono: "JetBrains Mono", ui-monospace, monospace;
 ```
 
-Type scale dashboard (density 8 — dense/dashboard):
+Type scale (density 6 — standard):
 | Role | Size | Weight | Line |
 |---|---|---:|---|
-| Display | 30px | 700 | 36px |
+| Display | 30px | 700 | 38px |
 | Title | 20px | 600 | 28px |
-| Subtitle | 16px | 600 | 24px |
+| Subtitle | 16px | 500 | 24px |
 | Body | 14px | 400 | 22px |
-| Label | 12px | 500 | 16px |
+| Label | 13px | 500 | 18px |
 | Mono | 12px | 500 | 18px |
-| Caption | 11px | 400 | 16px |
+| Caption | 12px | 400 | 16px |
 
 ## Color — OKLCH (shadcn) derived dari MASTER HEX
 
