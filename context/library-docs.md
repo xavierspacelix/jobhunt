@@ -13,7 +13,7 @@ Records approved deps. Not substitute for official docs.
 
 | Area | Decision | Notes |
 |---|---|---|
-| Framework | Next.js 15 App Router | SSR + API routes |
+| Framework | Next.js 16 App Router | SSR + API routes |
 | Language | TypeScript strict | |
 | DB | Prisma 7 + Postgres (Supabase) | SQLite fallback dev |
 | Auth | NextAuth v5 (Auth.js) + PrismaAdapter | Email + Google |
