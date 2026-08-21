@@ -2,6 +2,7 @@
 
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 
 type State = { error?: string };
 
@@ -28,5 +29,5 @@ export async function loginAction(
     throw error;
   }
 
-  return {};
+  redirect("/dashboard");
 }
