@@ -15,6 +15,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { CoverLetterDialog } from "@/components/cover-letter-dialog"
 import {
   Sheet,
   SheetContent,
@@ -44,6 +45,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ChevronsUpDownIcon,
+  FileTextIcon,
 } from "lucide-react"
 
 type Source = "GLINTS" | "JOBSTREET"
@@ -64,6 +66,7 @@ interface AppCard {
   notes: string | null
   appliedAt: string | null
   nextFollowUpAt: string | null
+  coverLetter: string | null
   createdAt: string
   job: JobInfo
 }
@@ -722,9 +725,27 @@ function EditForm({
           </div>
         </div>
 
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-foreground">
+            Cover Letter
+          </span>
+          <CoverLetterDialog
+            applicationId={app.id}
+            initialCoverLetter={app.coverLetter}
+            jobTitle={app.job.title}
+            company={app.job.company ?? undefined}
+            trigger={
+              <Button variant="outline" size="sm">
+                <FileTextIcon className="size-4" />
+                Buat Cover Letter
+              </Button>
+            }
+          />
+        </div>
+
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">
-            Tanggal Melamar
+            Catatan
           </span>
           <Input
             type="date"

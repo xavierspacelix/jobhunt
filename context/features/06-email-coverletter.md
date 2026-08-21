@@ -3,6 +3,11 @@
 ## Goal
 Semi-auto: generate cover letter + kirim email via Resend.
 
+## Status
+- Cover-letter generation: DONE (AI + heuristic fallback, editable, saved to `Application.coverLetter`, UI di Kanban EditSheet).
+- Email send via Resend: DEFERRED (pending OD-003 domain/key). Scope reduced by user to generation only for now.
+
+
 ## User Outcome
 Dari Application: Generate Cover Letter (AI) -> edit -> Send Email -> EmailLog.
 
