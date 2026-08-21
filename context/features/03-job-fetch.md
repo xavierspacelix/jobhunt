@@ -18,6 +18,14 @@ User paste link di /jobs → detail lowongan muncul, bisa save.
   recruiter, skills, externalJobId, shareToken, companyRefId, companyDetails
   (JSON-LD `hiringOrganization` + fallback teks). Tersimpan di kolom Job baru
   (migrasi `job_detail_fields`).
+- JobStreet: ekstrak via `data-automation` (title/company/location/industry/
+  work-type/salary/login-gated/date→postedAt/description+qualifications).
+- Glints: CSS-module (kelas ter-hash) → parser struktural: h1 (judul),
+  `a[href*="/companies/"]` (perusahaan), breadcrumb (lokasi+ kategori),
+  teks `:contains`-style (gaji/jenis/experience/education/recruiter),
+  heading traversal untuk Skills/Deskripsi/Tentang Perusahaan/Alamat.
+  Job ID + Share Token diambil dari URL
+  (`/opportunities/jobs/{id}/share/{token}`).
 - UI /jobs: paste URL -> preview detail lengkap (Job Core + Skills + Company
   Details, read-only) -> simpan; daftar tersimpan bisa dibuka detail & dihapus.
 
@@ -40,6 +48,8 @@ User paste link di /jobs → detail lowongan muncul, bisa save.
 - [x] Preview hasil scrape tampil detail lengkap (Job Core + Company Details)
 - [x] Field baru (skills, type, experience, dll) tersimpan & bisa dilihat lagi
 - [x] Lowongan tersimpan bisa dibuka detail & dihapus
+- [x] JobStreet via `data-automation`; Glints via selector struktural (h1/breadcrumb/heading)
+- [x] Job ID (JobStreet) & Job ID + Share Token (Glints) diekstrak dari URL
 
 ## Dependencies
 - 01

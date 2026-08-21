@@ -58,7 +58,9 @@ export const POST = auth(async (req) => {
   const fetchError: string | null = rendered.error
 
   const fields =
-    match.source === "GLINTS" ? parseGlints(html) : parseJobstreet(html)
+    match.source === "GLINTS"
+      ? parseGlints(html, url)
+      : parseJobstreet(html, url)
 
   return NextResponse.json({
     source: match.source,

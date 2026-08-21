@@ -35,7 +35,7 @@ function asArray(v: unknown): string[] {
   return [s]
 }
 
-function htmlToText(html?: string): string | undefined {
+export function htmlToText(html?: string): string | undefined {
   if (!html) return undefined
   const text = html
     .replace(/<\s*br\s*\/?>/gi, "\n")
@@ -305,7 +305,7 @@ export function ldToFields(ld: Record<string, unknown>): ParsedFields {
   const shareToken = asText(
     recursiveFindKey(ld, ["shareToken", "share_token", "shareId", "shareKey"]),
   )
-  const companyId = asText(
+  const companyRefId = asText(
     recursiveFindKey(ld, ["companyId", "company_id", "organizationId"]),
   )
   const recruiter = asText(
@@ -315,7 +315,7 @@ export function ldToFields(ld: Record<string, unknown>): ParsedFields {
   return {
     title,
     company,
-    companyId,
+    companyRefId,
     location,
     salary,
     description,
