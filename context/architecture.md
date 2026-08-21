@@ -10,7 +10,7 @@
 | DB | Prisma 7 ORM + Postgres (Supabase) / SQLite dev | Persistence, migrations |
 | CV Parse | pdf-parse / pdfjs | Ekstrak teks PDF |
 | AI | Vercel AI SDK + OpenAI / Gemini | Scoring & cover letter |
-| Scraper | fetch + cheerio (MVP), Playwright (Fase 3 cron) | Fetch JD via URL |
+| Scraper | fetch + cheerio; local headless browser (Playwright + Chromium) fallback on 403/Cloudflare; Playwright juga untuk cron Fase 3 | Fetch JD via URL |
 | Email | Resend (primary), Nodemailer fallback | Kirim lamaran & reminder |
 | Deploy | Vercel + Cron | Hosting & scheduled jobs |
 | Validation | Zod | Input & env validation |
@@ -92,10 +92,10 @@ Rules:
 ## Job Fetch (Paste URL)
 
 1. User paste URL -> `POST /api/jobs/fetch-url` {url}
-2. Validate domain allowlist (`glints.com`, `jobstreet.co.id/.com`).
-3. `fetch` with UA + timeout 10s.
-4. Route to correct parser `lib/scrapers/glints.ts` or `jobstreet.ts`.
-5. Return normalized Job JSON -> save.
+2. Validate domain allowlist (`glints.com`, `jobstreet.co.id/.com`) + SSRF block private IP.
+3. Native `fetch` with browser-like UA + timeout 10s; bila 403/Cloudflare, fallback ke local headless browser (Playwright + Chromium) lalu `page.content()`.
+4. Route to correct parser `lib/scrapers/glints.ts` atau `jobstreet.ts` (cheerio): JSON-LD `JobPosting`, lalu scan JSON-LD `baseSalary`, lalu scan teks halaman untuk gaji; deskripsi pertahankan paragraph (bukan flat).
+5. Return normalized Job JSON -> save (atau form manual bila parse kosong).
 
 Fallback if fetch blocked: return manual input form.
 

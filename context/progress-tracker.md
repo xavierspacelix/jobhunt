@@ -5,9 +5,9 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 ## Current Status
 
 - Phase: Phase 1 - Foundation
-- In progress: 03 - Job Fetch Paste URL (Glints & Jobstreet)
-- Last completed: 02 - CV Upload & Parse (PDF)
-- Next: Feature 04 - Application Tracker (Kanban)
+- In progress: 04 - Application Tracker (Kanban)
+- Last completed: 03 - Job Fetch Paste URL (Glints & Jobstreet)
+- Next: Feature 05 - AI Matching Score
 
 ## Features
 
@@ -15,7 +15,7 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 |---|---|---|---|
 | 01 | Foundation, Auth & DB | `features/01-foundation-auth-db.md` | complete |
 | 02 | CV Upload & Parse (PDF) | `features/02-cv-upload-parse.md` | in progress |
-| 03 | Job Fetch Paste URL (Glints & Jobstreet) | `features/03-job-fetch.md` | planned |
+| 03 | Job Fetch Paste URL (Glints & Jobstreet) | `features/03-job-fetch.md` | complete |
 | 04 | Application Tracker (Kanban) | `features/04-tracker-kanban.md` | planned |
 | 05 | AI Matching Score | `features/05-ai-matching.md` | planned |
 | 06 | Email & Cover Letter | `features/06-email-coverletter.md` | planned |
