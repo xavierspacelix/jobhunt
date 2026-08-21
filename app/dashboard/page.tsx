@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOutAction } from "./actions";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -16,6 +17,12 @@ export default async function DashboardPage() {
         <BrandLogo />
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Link
+            href="/profile"
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:opacity-90"
+          >
+            Profil &amp; CV
+          </Link>
           <form action={signOutAction}>
             <button
               type="submit"

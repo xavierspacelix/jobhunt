@@ -44,6 +44,12 @@ next-env.d.ts
 # prisma generated client
 /lib/generated/
 
+# local test fixtures (may contain personal PDFs, e.g. real CVs)
+/tests/fixtures/*.pdf
+
+# runtime local CV storage (MinIO fallback)
+/uploads/
+
 # agent runtime artifacts (not project source)
 .agents/
 .claude/
