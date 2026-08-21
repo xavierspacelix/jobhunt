@@ -28,12 +28,7 @@ const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
   { title: "Profil & CV", url: "/profile", icon: <FileTextIcon /> },
   { title: "Lowongan", url: "/jobs", icon: <SearchIcon /> },
-  {
-    title: "Pelacak Lamaran",
-    url: "#",
-    icon: <ListChecksIcon />,
-    disabled: true,
-  },
+  { title: "Pelacak Lamaran", url: "/tracker", icon: <ListChecksIcon /> },
 ]
 
 export function AppSidebar({

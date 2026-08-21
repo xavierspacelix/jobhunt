@@ -13,8 +13,13 @@ User paste link di /jobs → detail lowongan muncul, bisa save.
   browser (Playwright + Chromium) bila 403/Cloudflare. Parser murni cheerio
   `lib/scrapers/glints.ts`, `jobstreet.ts` (JSON-LD JobPosting + meta)
 - Job dedup by sourceUrl, manual fallback form jika parse gagal
-- POST/GET /api/jobs (simpan/list), GET /api/jobs/[id]
-- UI /jobs: paste URL -> form terisi -> simpan + daftar tersimpan
+- POST/GET /api/jobs (simpan/list), GET/DELETE /api/jobs/[id]
+- Rich detail: parser ekstrak employmentType, experience, education, category,
+  recruiter, skills, externalJobId, shareToken, companyRefId, companyDetails
+  (JSON-LD `hiringOrganization` + fallback teks). Tersimpan di kolom Job baru
+  (migrasi `job_detail_fields`).
+- UI /jobs: paste URL -> preview detail lengkap (Job Core + Skills + Company
+  Details, read-only) -> simpan; daftar tersimpan bisa dibuka detail & dihapus.
 
 ## Catatan Scope
 - Browserbase ditolak (tidak tersedia di Indonesia). Diganti local headless
@@ -32,6 +37,9 @@ User paste link di /jobs → detail lowongan muncul, bisa save.
 - [x] Description mempertahankan paragraph (bukan flat jadi satu baris)
 - [x] Unknown domain rejected 400
 - [x] Parser unit tests dengan fixture HTML (11 tests)
+- [x] Preview hasil scrape tampil detail lengkap (Job Core + Company Details)
+- [x] Field baru (skills, type, experience, dll) tersimpan & bisa dilihat lagi
+- [x] Lowongan tersimpan bisa dibuka detail & dihapus
 
 ## Dependencies
 - 01
