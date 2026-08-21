@@ -14,7 +14,7 @@ export interface CompanyDetails {
 export interface ParsedFields {
   title?: string
   company?: string
-  companyId?: string
+  companyRefId?: string
   location?: string
   salary?: string
   description?: string
