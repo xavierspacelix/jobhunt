@@ -3,9 +3,8 @@ import { readLocalCv } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
-export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+export const GET = auth(async (req) => {
+  if (!req.auth?.user?.email) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -25,4 +24,4 @@ export async function GET(req: Request) {
       "content-disposition": "inline",
     },
   });
-}
+});

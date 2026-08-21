@@ -15,12 +15,16 @@ function jsonError(message: string, status: number) {
   });
 }
 
-export async function POST(req: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
+export const POST = auth(async (req) => {
+  const email = req.auth?.user?.email;
+  if (!email) {
     return jsonError("Unauthorized", 401);
   }
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return jsonError("Unauthorized", 401);
+  }
+  const userId = user.id;
 
   let form: FormData;
   try {
@@ -83,4 +87,4 @@ export async function POST(req: Request) {
   });
 
   return Response.json({ profile });
-}
+});
