@@ -7,7 +7,7 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 ## Phase 0: Context & Skeleton
 
 1. Context docs & feature specs done (this plan).
-2. Init Next.js 15 + TS strict + Tailwind + shadcn + ESLint + Prettier.
+2. Init Next.js 16 + TS strict + Tailwind + shadcn + ESLint + Prettier.
 3. Setup Prisma + Supabase/Docker + .env.example
 
 ## Phase 1: Foundation
