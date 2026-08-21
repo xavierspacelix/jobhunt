@@ -1,6 +1,6 @@
 # UI Tokens — JobHunter
 
-> **Source of Truth:** `design-system/jobhunter/MASTER.md` (generated via `ui-ux-pro-max` skill, variance 7 / motion 4 / density 7, Style: Flat Design).
+> **Source of Truth:** `design-system/jobhunter/MASTER.md` (generated via `ui-ux-pro-max` skill, variance 5 / motion 4 / density 8, Style: Flat Design).
 > Tokens di bawah adalah adaptasi OKLCH + shadcn untuk implementasi Next.js. Jangan pakai raw hex/palette di components.
 
 ## Design System Master
@@ -11,22 +11,22 @@
 
 Perbedaan dari `../nerd/prototype` (DILARANG copy):
 - Nerd: neutral OKLCH + green lime `--primary oklch(0.841 0.238 128.85)`, dense utility, mono-heavy.
-- JobHunter: **professional blue `#0369A1`** + success green `#16A34A`, flat dashboard, card-focused, funnel pattern. Palette, font, dan layout baru.
+- JobHunter: **professional blue `#0369A1`** + success green `#16A34A`, flat dashboard, card-focused, funnel pattern. Font: Plus Jakarta Sans (bukan Fira). Palette, font, dan layout baru.
 
 ## Typography
 
-- Heading: **Fira Sans** (dari MASTER — Fira Code di MASTER adalah fallback mono, tapi untuk dashboard gunakan Fira Sans untuk heading agar lebih humanis; Fira Code hanya untuk mono/data)
-- Body: **Fira Sans**
-- Mono: **Fira Code** (untuk skor, gaji, log)
-- Alternatif shadcn default: `Inter` jika Google Fonts gagal — jangan download font lain tanpa update MASTER.
+- Heading: **Plus Jakarta Sans** (dari MASTER — friendly, modern, SaaS)
+- Body: **Plus Jakarta Sans**
+- Mono: **JetBrains Mono** (untuk skor, gaji, log)
+- Alternatif: `Inter` jika Google Fonts gagal — jangan download font lain tanpa update MASTER.
 
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
---font-sans: "Fira Sans", Inter, system-ui, sans-serif;
---font-mono: "Fira Code", monospace;
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+--font-sans: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+--font-mono: "JetBrains Mono", ui-monospace, monospace;
 ```
 
-Type scale dashboard (density 7 — balanced):
+Type scale dashboard (density 8 — dense/dashboard):
 | Role | Size | Weight | Line |
 |---|---|---:|---|
 | Display | 30px | 700 | 36px |
