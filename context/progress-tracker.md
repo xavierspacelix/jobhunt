@@ -5,15 +5,15 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 ## Current Status
 
 - Phase: Phase 1 - Foundation
-- In progress: 01 - Foundation, Auth & DB
-- Last completed: Phase 0 skeleton (Next.js 16 + TS strict + Tailwind v4 + shadcn + Prisma 7 + ESLint/Prettier, `.env.example`)
+- In progress: none
+- Last completed: 01 - Foundation, Auth & DB
 - Next: Feature 02 - CV Upload & Parse (PDF)
 
 ## Features
 
 | ID | Feature | Specification | Status |
 |---|---|---|---|
-| 01 | Foundation, Auth & DB | `features/01-foundation-auth-db.md` | in progress |
+| 01 | Foundation, Auth & DB | `features/01-foundation-auth-db.md` | complete |
 | 02 | CV Upload & Parse (PDF) | `features/02-cv-upload-parse.md` | planned |
 | 03 | Job Fetch Paste URL (Glints & Jobstreet) | `features/03-job-fetch.md` | planned |
 | 04 | Application Tracker (Kanban) | `features/04-tracker-kanban.md` | planned |
