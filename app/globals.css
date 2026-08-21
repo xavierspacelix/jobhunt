@@ -49,38 +49,39 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: #F0F9FF;
+  --foreground: #0C4A6E;
+  --card: #FFFFFF;
+  --card-foreground: #0C4A6E;
+  --popover: #FFFFFF;
+  --popover-foreground: #0C4A6E;
+  --primary: #0369A1;
+  --primary-foreground: #FFFFFF;
+  --secondary: #0EA5E9;
+  --secondary-foreground: #0F172A;
+  --muted: #E7EFF5;
+  --muted-foreground: #475569;
+  --accent: #16A34A;
+  --accent-foreground: #000000;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #BAE6FD;
+  --input: #BAE6FD;
+  --ring: #0369A1;
+  --chart-1: #0369A1;
+  --chart-2: #16A34A;
+  --chart-3: #0EA5E9;
+  --chart-4: #475569;
+  --chart-5: #0C4A6E;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0C4A6E;
+  --sidebar-primary: #0369A1;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E7EFF5;
+  --sidebar-accent-foreground: #0C4A6E;
+  --sidebar-border: #BAE6FD;
+  --sidebar-ring: #0369A1;
 }
 
 .dark {
