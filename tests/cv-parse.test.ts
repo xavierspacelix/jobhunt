@@ -62,7 +62,7 @@ test("extractCv uses heuristic fallback when LLM env is absent", async () => {
   delete process.env.LLM_API_KEY;
   delete process.env.LLM_BASE_URL;
   try {
-    const data = await extractCv(SAMPLE);
+    const { data } = await extractCv(SAMPLE);
     assert.ok(data.skills.length > 0);
   } finally {
     if (prevKey) process.env.LLM_API_KEY = prevKey;

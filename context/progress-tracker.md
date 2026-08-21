@@ -34,6 +34,7 @@ Allowed status: `planned`, `in progress`, `blocked`, `complete`.
 - AI scoring cache per profile+job.
 - CV storage: user-run MinIO (S3-compatible); local-disk fallback when `MINIO_*` unset.
 - CV extraction: provider-agnostic OpenAI-compatible LLM (`LLM_BASE_URL`); NOT OpenAI/Gemini; heuristic fallback when key absent.
+- CV extraction field set = Glints-style profile (fullName, headline, location, email, phone, skills, summary, experience, education, certifications, links); hasil bisa diedit via PUT /api/profile (inline edit di /profile).
 
 ## Blockers
 

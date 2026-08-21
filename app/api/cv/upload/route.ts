@@ -64,27 +64,45 @@ export const POST = auth(async (req) => {
     );
   }
 
-  const data = await extractCv(rawText);
+  const { data, source } = await extractCv(rawText);
   const cvKey = await saveCv(userId, buffer);
 
   const profile = await prisma.profile.upsert({
     where: { userId },
     update: {
       rawText,
+      fullName: data.fullName,
+      headline: data.headline,
+      location: data.location,
+      email: data.email,
+      phone: data.phone,
       skills: data.skills,
       summary: data.summary,
       experience: data.experience,
+      education: data.education,
+      certifications: data.certifications,
+      links: data.links,
       cvKey,
+      parsedWith: source,
     },
     create: {
       userId,
       rawText,
+      fullName: data.fullName,
+      headline: data.headline,
+      location: data.location,
+      email: data.email,
+      phone: data.phone,
       skills: data.skills,
       summary: data.summary,
       experience: data.experience,
+      education: data.education,
+      certifications: data.certifications,
+      links: data.links,
       cvKey,
+      parsedWith: source,
     },
   });
 
-  return Response.json({ profile });
+  return Response.json({ profile, source });
 });

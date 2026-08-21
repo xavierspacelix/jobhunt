@@ -42,10 +42,19 @@ model Profile {
   id        String   @id @default(cuid())
   userId    String   @unique
   rawText   String?
+  fullName  String?
+  headline  String?
+  location  String?
+  email     String?
+  phone     String?
   skills    String[]
   summary   String?
   experience Json?
+  education   Json?
+  certifications Json?
+  links    Json?
   cvKey      String?
+  parsedWith String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
