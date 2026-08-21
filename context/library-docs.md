@@ -21,7 +21,8 @@ Records approved deps. Not substitute for official docs.
 | Validation | Zod 3 | Env + request |
 | CV Parse | pdf-parse 1.1.1 | PDF text extract (dynamic `import()` in Node runtime route) |
 | Object Storage | minio 8.x | CV PDF blobs (S3-compatible, user-run MinIO); local-disk fallback when unset |
-| Scraper MVP | cheerio 1.x | HTML parse, fetch native |
+| Scraper MVP | cheerio 1.x | HTML parse |
+| Scraper render | playwright 1.x (local Chromium) | Paste-URL fetch: native fetch dulu, fallback ke local headless browser bila 403/Cloudflare (Browserbase ditolak, tidak tersedia di Indonesia) |
 | Scraper Fase 3 | playwright 1.x | Cron headless |
 | AI | OpenAI-compatible LLM (provider-agnostic) | DeepSeek/Groq/Ollama/OpenRouter via `LLM_BASE_URL`; NOT OpenAI/Gemini; heuristic fallback if no key |
 | Email | resend 4.x | + nodemailer fallback |
