@@ -3,7 +3,12 @@
 import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import {
   SearchIcon,
   SaveIcon,
@@ -11,10 +16,26 @@ import {
   Loader2Icon,
   XIcon,
   BriefcaseIcon,
+  ListChecksIcon,
+  Trash2Icon,
+  EyeIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Source = "GLINTS" | "JOBSTREET"
+
+interface CompanyDetails {
+  name?: string | null
+  industry?: string | null
+  size?: string | null
+  website?: string | null
+  linkedin?: string | null
+  instagram?: string | null
+  twitter?: string | null
+  facebook?: string | null
+  address?: string | null
+  about?: string | null
+}
 
 interface Draft {
   title: string
@@ -26,6 +47,16 @@ interface Draft {
   description: string
   postedAt: string
   fetchError: string | null
+  employmentType: string
+  experience: string
+  education: string
+  category: string
+  recruiter: string
+  skills: string[]
+  externalJobId: string
+  shareToken: string
+  companyId: string
+  companyDetails: CompanyDetails | null
 }
 
 interface SavedJob {
@@ -38,6 +69,17 @@ interface SavedJob {
   sourceUrl: string
   postedAt: string | null
   createdAt: string
+  description?: string | null
+  employmentType?: string | null
+  experience?: string | null
+  education?: string | null
+  category?: string | null
+  recruiter?: string | null
+  skills?: string[]
+  externalJobId?: string | null
+  shareToken?: string | null
+  companyRefId?: string | null
+  companyDetails?: CompanyDetails | null
 }
 
 function SourceBadge({ source }: { source: Source }) {
@@ -55,6 +97,52 @@ function SourceBadge({ source }: { source: Source }) {
   )
 }
 
+function Row({
+  label,
+  value,
+  href,
+}: {
+  label: string
+  value?: string | null
+  href?: string | null
+}) {
+  if (!value) return null
+  return (
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-sm text-foreground">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="break-all text-indigo-600 hover:underline"
+          >
+            {value}
+          </a>
+        ) : (
+          <span className="break-words">{value}</span>
+        )}
+      </dd>
+    </div>
+  )
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold text-foreground">{title}</h3>
+      {children}
+    </div>
+  )
+}
+
 export function JobFetcher() {
   const [url, setUrl] = React.useState("")
   const [loading, setLoading] = React.useState(false)
@@ -62,13 +150,29 @@ export function JobFetcher() {
   const [draft, setDraft] = React.useState<Draft | null>(null)
   const [saving, setSaving] = React.useState(false)
   const [jobs, setJobs] = React.useState<SavedJob[]>([])
+  const [trackedIds, setTrackedIds] = React.useState<string[]>([])
+  const [addingId, setAddingId] = React.useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [detailJob, setDetailJob] = React.useState<SavedJob | null>(null)
 
   const loadJobs = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/jobs")
-      if (!res.ok) return
-      const data = await res.json()
-      setJobs(data.jobs ?? [])
+      const [jobsRes, appsRes] = await Promise.all([
+        fetch("/api/jobs"),
+        fetch("/api/applications"),
+      ])
+      if (jobsRes.ok) {
+        const data = await jobsRes.json()
+        setJobs(data.jobs ?? [])
+      }
+      if (appsRes.ok) {
+        const data = await appsRes.json()
+        const ids = (data.applications ?? [])
+          .map((a: { job?: { id: string } }) => a.job?.id)
+          .filter(Boolean) as string[]
+        setTrackedIds(ids)
+      }
     } catch {
       // ignore
     }
@@ -105,6 +209,16 @@ export function JobFetcher() {
         description: data.description ?? "",
         postedAt: (data.postedAt ?? "").slice(0, 10),
         fetchError: data.fetchError ?? null,
+        employmentType: data.employmentType ?? "",
+        experience: data.experience ?? "",
+        education: data.education ?? "",
+        category: data.category ?? "",
+        recruiter: data.recruiter ?? "",
+        skills: data.skills ?? [],
+        externalJobId: data.externalJobId ?? "",
+        shareToken: data.shareToken ?? "",
+        companyId: data.companyId ?? "",
+        companyDetails: data.companyDetails ?? null,
       })
     } catch {
       setError("Terjadi kesalahan saat mengambil lowongan")
@@ -130,6 +244,16 @@ export function JobFetcher() {
           sourceUrl: draft.sourceUrl,
           description: draft.description,
           postedAt: draft.postedAt || undefined,
+          employmentType: draft.employmentType || undefined,
+          experience: draft.experience || undefined,
+          education: draft.education || undefined,
+          category: draft.category || undefined,
+          recruiter: draft.recruiter || undefined,
+          skills: draft.skills,
+          externalJobId: draft.externalJobId || undefined,
+          shareToken: draft.shareToken || undefined,
+          companyRefId: draft.companyId || undefined,
+          companyDetails: draft.companyDetails || undefined,
         }),
       })
       const data = await res.json()
@@ -147,10 +271,68 @@ export function JobFetcher() {
     }
   }
 
-  function update<K extends keyof Draft>(key: K, value: Draft[K]) {
-    if (!draft) return
-    setDraft({ ...draft, [key]: value })
+  async function handleAddToTracker(jobId: string) {
+    if (trackedIds.includes(jobId)) return
+    setAddingId(jobId)
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      })
+      if (res.ok) {
+        setTrackedIds((prev) => [...prev, jobId])
+      }
+    } finally {
+      setAddingId(null)
+    }
   }
+
+  async function handleDeleteJob(jobId: string) {
+    setDeletingId(jobId)
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" })
+      if (res.ok) {
+        setJobs((prev) => prev.filter((j) => j.id !== jobId))
+        setTrackedIds((prev) => prev.filter((id) => id !== jobId))
+        setConfirmDeleteId(null)
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const cd = draft?.companyDetails
+  const jobCoreRows = draft
+    ? [
+        { label: "Title", value: draft.title },
+        { label: "Company", value: draft.company },
+        { label: "Company ID", value: draft.companyId },
+        { label: "Job ID", value: draft.externalJobId },
+        { label: "Share Token", value: draft.shareToken },
+        { label: "Salary", value: draft.salary },
+        { label: "Type", value: draft.employmentType },
+        { label: "Experience", value: draft.experience },
+        { label: "Education", value: draft.education },
+        { label: "Location", value: draft.location },
+        { label: "Category", value: draft.category },
+        { label: "Recruiter", value: draft.recruiter },
+      ]
+    : []
+
+  const companyRows = cd
+    ? [
+        { label: "Name", value: cd.name },
+        { label: "Industry", value: cd.industry },
+        { label: "Size", value: cd.size },
+        { label: "Website", value: cd.website, href: cd.website },
+        { label: "LinkedIn", value: cd.linkedin, href: cd.linkedin },
+        { label: "Instagram", value: cd.instagram, href: cd.instagram },
+        { label: "Twitter", value: cd.twitter, href: cd.twitter },
+        { label: "Facebook", value: cd.facebook, href: cd.facebook },
+        { label: "Office Address", value: cd.address },
+      ]
+    : []
 
   return (
     <div className="flex flex-col gap-6">
@@ -181,9 +363,7 @@ export function JobFetcher() {
             Ambil
           </Button>
         </div>
-        {error && (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
-        )}
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </form>
 
       {draft && (
@@ -191,7 +371,7 @@ export function JobFetcher() {
           <div className="mb-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <SourceBadge source={draft.source} />
-              <span className="text-xs text-muted-foreground">
+              <span className="max-w-[16rem] truncate text-xs text-muted-foreground">
                 {draft.sourceUrl}
               </span>
             </div>
@@ -211,51 +391,59 @@ export function JobFetcher() {
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Judul Posisi *">
-              <Input
-                value={draft.title}
-                onChange={(e) => update("title", e.target.value)}
-                placeholder="mis. Frontend Engineer"
-              />
-            </Field>
-            <Field label="Perusahaan">
-              <Input
-                value={draft.company}
-                onChange={(e) => update("company", e.target.value)}
-              />
-            </Field>
-            <Field label="Lokasi">
-              <Input
-                value={draft.location}
-                onChange={(e) => update("location", e.target.value)}
-              />
-            </Field>
-            <Field label="Gaji">
-              <Input
-                value={draft.salary}
-                onChange={(e) => update("salary", e.target.value)}
-                placeholder="mis. Rp 10-15 juta"
-              />
-            </Field>
-            <Field label="Tanggal Posting">
-              <Input
-                type="date"
-                value={draft.postedAt}
-                onChange={(e) => update("postedAt", e.target.value)}
-              />
-            </Field>
+          <div className="space-y-5">
+            <Section title="Job Core">
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                {jobCoreRows.map((r) => (
+                  <Row key={r.label} label={r.label} value={r.value} />
+                ))}
+              </dl>
+            </Section>
+
+            {draft.skills.length > 0 && (
+              <Section title="Skills Required">
+                <div className="flex flex-wrap gap-2">
+                  {draft.skills.map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            <Section title="Job Description">
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {draft.description || "—"}
+              </p>
+            </Section>
+
+            {cd && companyRows.some((r) => r.value) && (
+              <Section title="Company Details">
+                <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {companyRows.map((r) => (
+                    <Row
+                      key={r.label}
+                      label={r.label}
+                      value={r.value}
+                      href={r.href}
+                    />
+                  ))}
+                </dl>
+                {cd.about && (
+                  <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                    {cd.about}
+                  </p>
+                )}
+              </Section>
+            )}
+
           </div>
 
-          <Field label="Deskripsi">
-            <Textarea
-              className="min-h-40"
-              value={draft.description}
-              onChange={(e) => update("description", e.target.value)}
-            />
-          </Field>
-
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-5 flex justify-end gap-2">
             <Button
               variant="ghost"
               onClick={() => setDraft(null)}
@@ -302,9 +490,8 @@ export function JobFetcher() {
                       <SourceBadge source={job.source} />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {[job.company, job.location]
-                        .filter(Boolean)
-                        .join(" · ") || "—"}
+                      {[job.company, job.location].filter(Boolean).join(" · ") ||
+                        "—"}
                       {job.salary ? ` · ${job.salary}` : ""}
                     </p>
                     {job.postedAt && (
@@ -314,35 +501,196 @@ export function JobFetcher() {
                       </p>
                     )}
                   </div>
-                  <a
-                    href={job.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
-                  >
-                    Buka <ExternalLinkIcon className="size-3.5" />
-                  </a>
+                  <div className="flex items-center gap-2">
+                    {trackedIds.includes(job.id) ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <ListChecksIcon className="size-3.5" />
+                        Di tracker
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddToTracker(job.id)}
+                        disabled={addingId === job.id}
+                      >
+                        {addingId === job.id ? (
+                          <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                          <ListChecksIcon className="size-3.5" />
+                        )}
+                        Tracker
+                      </Button>
+                    )}
+                    <a
+                      href={job.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
+                    >
+                      Buka <ExternalLinkIcon className="size-3.5" />
+                    </a>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Lihat detail"
+                      onClick={() => setDetailJob(job)}
+                    >
+                      <EyeIcon className="size-4" />
+                    </Button>
+                    {confirmDeleteId === job.id ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={deletingId === job.id}
+                        >
+                          Batal
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-600"
+                          onClick={() => handleDeleteJob(job.id)}
+                          disabled={deletingId === job.id}
+                        >
+                          {deletingId === job.id ? (
+                            <Loader2Icon className="size-3.5 animate-spin" />
+                          ) : null}
+                          Hapus
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Hapus lowongan"
+                        onClick={() => setConfirmDeleteId(job.id)}
+                        disabled={deletingId === job.id}
+                      >
+                        <Trash2Icon className="size-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <JobDetailSheet job={detailJob} onClose={() => setDetailJob(null)} />
     </div>
   )
 }
 
-function Field({
-  label,
-  children,
+function JobDetailSheet({
+  job,
+  onClose,
 }: {
-  label: string
-  children: React.ReactNode
+  job: SavedJob | null
+  onClose: () => void
 }) {
+  const cd = job?.companyDetails ?? null
+  const jobCoreRows = job
+    ? [
+        { label: "Title", value: job.title },
+        { label: "Company", value: job.company },
+        { label: "Company ID", value: job.companyRefId },
+        { label: "Job ID", value: job.externalJobId },
+        { label: "Share Token", value: job.shareToken },
+        { label: "Salary", value: job.salary },
+        { label: "Type", value: job.employmentType },
+        { label: "Experience", value: job.experience },
+        { label: "Education", value: job.education },
+        { label: "Location", value: job.location },
+        { label: "Category", value: job.category },
+        { label: "Recruiter", value: job.recruiter },
+      ]
+    : []
+
+  const companyRows = cd
+    ? [
+        { label: "Name", value: cd.name },
+        { label: "Industry", value: cd.industry },
+        { label: "Size", value: cd.size },
+        { label: "Website", value: cd.website, href: cd.website },
+        { label: "LinkedIn", value: cd.linkedin, href: cd.linkedin },
+        { label: "Instagram", value: cd.instagram, href: cd.instagram },
+        { label: "Twitter", value: cd.twitter, href: cd.twitter },
+        { label: "Facebook", value: cd.facebook, href: cd.facebook },
+        { label: "Office Address", value: cd.address },
+      ]
+    : []
+
   return (
-    <label className="block space-y-1.5">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      {children}
-    </label>
+    <Sheet open={!!job} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="gap-0">
+        {job ? (
+          <>
+            <SheetHeader>
+              <div className="flex items-center gap-2">
+                <SourceBadge source={job.source} />
+                <span className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                  {job.sourceUrl}
+                </span>
+              </div>
+              <SheetTitle className="line-clamp-2">{job.title}</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 space-y-5 overflow-y-auto p-4">
+              <Section title="Job Core">
+                <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {jobCoreRows.map((r) => (
+                    <Row key={r.label} label={r.label} value={r.value} />
+                  ))}
+                </dl>
+              </Section>
+
+              {job.skills && job.skills.length > 0 && (
+                <Section title="Skills Required">
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              <Section title="Job Description">
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {job.description || "—"}
+                </p>
+              </Section>
+
+              {cd && companyRows.some((r) => r.value) && (
+                <Section title="Company Details">
+                  <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                    {companyRows.map((r) => (
+                      <Row
+                        key={r.label}
+                        label={r.label}
+                        value={r.value}
+                        href={r.href}
+                      />
+                    ))}
+                  </dl>
+                  {cd.about && (
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                      {cd.about}
+                    </p>
+                  )}
+                </Section>
+              )}
+            </div>
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
   )
 }

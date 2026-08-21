@@ -14,6 +14,16 @@ const jobInput = z.object({
   sourceUrl: z.string().url(),
   description: z.string().max(50000).optional(),
   postedAt: z.string().optional(),
+  employmentType: z.string().max(200).optional(),
+  experience: z.string().max(200).optional(),
+  education: z.string().max(200).optional(),
+  category: z.string().max(300).optional(),
+  recruiter: z.string().max(300).optional(),
+  skills: z.array(z.string().max(200)).max(50).optional(),
+  externalJobId: z.string().max(200).optional(),
+  shareToken: z.string().max(200).optional(),
+  companyRefId: z.string().max(200).optional(),
+  companyDetails: z.record(z.string().max(2000)).optional(),
 })
 
 function blankToNull(v?: string): string | null {
@@ -42,10 +52,38 @@ export const POST = auth(async (req) => {
   const salary = blankToNull(data.salary)
   const description = blankToNull(data.description)
   const postedAt = data.postedAt ? new Date(data.postedAt) : null
+  const employmentType = blankToNull(data.employmentType)
+  const experience = blankToNull(data.experience)
+  const education = blankToNull(data.education)
+  const category = blankToNull(data.category)
+  const recruiter = blankToNull(data.recruiter)
+  const externalJobId = blankToNull(data.externalJobId)
+  const shareToken = blankToNull(data.shareToken)
+  const companyRefId = blankToNull(data.companyRefId)
+  const skills = data.skills && data.skills.length ? data.skills : []
+  const companyDetails = data.companyDetails
 
   const job = await prisma.job.upsert({
     where: { sourceUrl: data.sourceUrl },
-    update: { title, company, location, salary, description, postedAt, source: data.source },
+    update: {
+      title,
+      company,
+      location,
+      salary,
+      description,
+      postedAt,
+      source: data.source,
+      employmentType,
+      experience,
+      education,
+      category,
+      recruiter,
+      skills,
+      externalJobId,
+      shareToken,
+      companyRefId,
+      companyDetails,
+    },
     create: {
       title,
       company,
@@ -55,6 +93,16 @@ export const POST = auth(async (req) => {
       postedAt,
       source: data.source,
       sourceUrl: data.sourceUrl,
+      employmentType,
+      experience,
+      education,
+      category,
+      recruiter,
+      skills,
+      externalJobId,
+      shareToken,
+      companyRefId,
+      companyDetails,
     },
   })
 

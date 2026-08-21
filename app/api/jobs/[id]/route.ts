@@ -19,3 +19,20 @@ export const GET = auth(async (
   }
   return NextResponse.json({ job })
 })
+
+export const DELETE = auth(async (
+  req,
+  { params }: { params: Promise<{ id: string }> },
+) => {
+  const email = req.auth?.user?.email
+  if (!email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  const { id } = await params
+  const existing = await prisma.job.findUnique({ where: { id } })
+  if (!existing) {
+    return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 })
+  }
+  await prisma.job.delete({ where: { id } })
+  return NextResponse.json({ ok: true })
+})

@@ -62,16 +62,26 @@ model Profile {
 }
 
 model Job {
-  id          String     @id @default(cuid())
-  title       String
-  company     String
-  location    String?
-  salary      String?
-  source      JobSource
-  sourceUrl   String     @unique
-  description String?
-  postedAt    DateTime?
-  createdAt   DateTime   @default(now())
+  id              String     @id @default(cuid())
+  title           String
+  company         String
+  location        String?
+  salary          String?
+  source          JobSource
+  sourceUrl       String     @unique
+  description     String?
+  postedAt        DateTime?
+  employmentType  String?
+  experience      String?
+  education       String?
+  category        String?
+  recruiter       String?
+  skills          String[]
+  externalJobId   String?
+  shareToken      String?
+  companyRefId    String?
+  companyDetails  Json?
+  createdAt       DateTime   @default(now())
 
   applications Application[]
 }
