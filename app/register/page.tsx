@@ -2,9 +2,11 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Briefcase, Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { registerAction } from "./actions";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 
 const steps = [
   { title: "Unggah CV", desc: "Dapatkan analisis skill & kekuatanmu." },
@@ -16,12 +18,13 @@ export default function RegisterPage() {
   const [state, formAction] = useActionState(registerAction, {});
 
   return (
-    <main className="grid min-h-screen lg:grid-cols-2">
+    <main className="relative grid min-h-screen lg:grid-cols-2">
+      <div className="fixed right-4 top-4 z-50">
+        <ThemeToggle />
+      </div>
+
       <aside className="hidden flex-col justify-between bg-secondary p-10 text-foreground lg:flex xl:p-14">
-        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <Briefcase className="size-5 text-accent" />
-          JobHunter
-        </div>
+        <BrandLogo className="text-lg" />
 
         <div className="space-y-9">
           <div>
@@ -69,7 +72,7 @@ export default function RegisterPage() {
               type="email"
               required
               placeholder="you@example.com"
-              className="w-full cursor-text rounded-xl border border-border bg-white px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full cursor-text rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -84,7 +87,7 @@ export default function RegisterPage() {
               required
               minLength={8}
               placeholder="Minimal 8 karakter"
-              className="w-full cursor-text rounded-xl border border-border bg-white px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full cursor-text rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 

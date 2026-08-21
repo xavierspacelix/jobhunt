@@ -36,6 +36,23 @@
 
 **Color Notes:** Warm cream canvas + muted indigo accent. Soft, friendly, low-contrast chrome. One accent color only — avoid saturated/competing hues.
 
+### Dark Mode
+
+Warm-dark variant lives under `.dark` in `app/globals.css` (token overrides only). Activated by `next-themes` (`attribute="class"`, `defaultTheme="system"`, `enableSystem`). Components use tokens only — no per-page dark code.
+
+| Role | Dark Hex |
+|------|----------|
+| Background | `#1C1917` |
+| Foreground | `#FAF8F4` |
+| Card | `#292524` |
+| Secondary (panel) | `#2A2620` |
+| Accent / CTA | `#6366F1` |
+| Muted | `#292524` |
+| Muted Foreground | `#A8A29E` |
+| Border / Input | `#3F3A34` |
+
+Rules: keep the single indigo accent; surfaces go darker & warmer; text flips to warm off-white; avoid pure black/white.
+
 ### Typography
 
 - **Heading Font:** Inter

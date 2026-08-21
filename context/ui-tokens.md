@@ -12,6 +12,7 @@
 Perbedaan dari `../nerd/prototype` (DILARANG copy):
 - Nerd: neutral OKLCH + green lime `--primary oklch(0.841 0.238 128.85)`, dense utility, mono-heavy.
 - JobHunter: **Soft Warm Minimal** — cream canvas `#FAF8F4` + muted indigo accent `#4F46E5`, warm panel `#F1EBE0`, rounded-2xl, soft shadow. Font: Inter. Friendly & calm, bukan flat-blue tajam.
+- **Dark mode:** warm-dark via `next-themes` (`.dark` tokens in `globals.css`): bg `#1C1917`, card `#292524`, accent `#6366F1`, text `#FAF8F4`. Komponen token-only, tidak ada kode dark per-page.
 
 ## Typography
 

@@ -4356,6 +4356,11 @@ next-auth@^5.0.0-beta.32:
   dependencies:
     "@auth/core" "0.41.3"
 
+next-themes@^0.4.6:
+  version "0.4.6"
+  resolved "https://registry.yarnpkg.com/next-themes/-/next-themes-0.4.6.tgz#8d7e92d03b8fea6582892a50a928c9b23502e8b6"
+  integrity sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==
+
 next@16.3.2:
   version "16.3.2"
   resolved "https://registry.yarnpkg.com/next/-/next-16.3.2.tgz#085cff5b8a0b0d3d65340b4e7c01ad665170feb4"

@@ -19,7 +19,22 @@ Living registry for reusable web UI. Read before creating component, update afte
 
 ## Implemented
 
-Belum ada — akan diisi per feature via `/imprint`.
+### BrandLogo
+
+File: `components/brand-logo.tsx`
+Last updated: 2026-08-22
+
+| Property | Class |
+|---|---|
+| Mark background | `fill-accent` |
+| Mark foreground | `stroke-accent-foreground` |
+| Border radius | SVG `rx="12"` in a 44px view box |
+| Text — primary | `text-foreground` |
+| Text size and weight | `text-lg font-medium tracking-[-0.035em]`; `Job` uses `font-semibold` |
+| Spacing | `gap-2.5` |
+| Shadow | none |
+
+**Pattern notes:** Minimal ascending path represents deliberate career progress. Use the full wordmark for navigation and auth surfaces; use `markOnly` only where space is constrained. Keep the mark flat, single-accent, and free of gradients or decorative effects.
 
 Target primitives (shadcn allowed, baru buat jika belum ada):
 - `components/ui/button.tsx` — variants: default(primary), secondary, outline, ghost, destructive
