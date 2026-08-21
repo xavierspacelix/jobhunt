@@ -100,6 +100,7 @@ Before adding crate/npm package:
 - Required checks (lint/type/test/build) must pass before merge.
 - One logical change per commit, Conventional Commits.
 - Tags `vX.Y.Z` immutable annotated.
+- Do NOT append "Generated with OpenCode" or any similar AI/tooling trailers to commit messages or PR descriptions.
 
 ## Failure And Recovery
 
