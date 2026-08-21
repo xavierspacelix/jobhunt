@@ -37,6 +37,7 @@ export default async function Page() {
     notes: a.notes,
     appliedAt: a.appliedAt?.toISOString() ?? null,
     nextFollowUpAt: a.nextFollowUpAt?.toISOString() ?? null,
+    coverLetter: a.coverLetter,
     createdAt: a.createdAt.toISOString(),
     job: {
       id: a.job.id,

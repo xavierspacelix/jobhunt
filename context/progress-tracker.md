@@ -49,6 +49,7 @@ Allowed status: `planned`, `in progress`, `blocked`, `complete`.
 See `roadmap.md`. Not active until promoted.
 
 ## Notes
+- Feature 06 split by user request: **cover-letter generation** implemented (formal Bahasa Indonesia; AI via LLM with heuristic fallback; editable + saved to `Application.coverLetter`). **Email send via Resend deferred** pending OD-003 (domain/key).
 
 - Feature-level decisions belong in its spec file.
 - `features/README.md` defines spec maintenance.

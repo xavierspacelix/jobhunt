@@ -11,6 +11,7 @@ const patchInput = z.object({
   notes: z.string().max(5000).optional(),
   appliedAt: z.string().nullable().optional(),
   nextFollowUpAt: z.string().nullable().optional(),
+  coverLetter: z.string().max(20000).nullable().optional(),
 })
 
 export const GET = auth(async (
@@ -82,6 +83,7 @@ export const PATCH = auth(async (
           : data.nextFollowUpAt
             ? new Date(data.nextFollowUpAt)
             : undefined,
+      coverLetter: data.coverLetter,
     },
     include: { job: true },
   })
