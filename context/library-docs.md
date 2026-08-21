@@ -19,10 +19,11 @@ Records approved deps. Not substitute for official docs.
 | Auth | NextAuth v5 (Auth.js) Credentials (email+password), JWT sessions | No PrismaAdapter (decision OD-005); Google/Email deferred |
 | Styling | Tailwind v4 + shadcn/ui | Tokens only |
 | Validation | Zod 3 | Env + request |
-| CV Parse | pdf-parse 1.x | PDF text extract |
+| CV Parse | pdf-parse 1.1.1 | PDF text extract (dynamic `import()` in Node runtime route) |
+| Object Storage | minio 8.x | CV PDF blobs (S3-compatible, user-run MinIO); local-disk fallback when unset |
 | Scraper MVP | cheerio 1.x | HTML parse, fetch native |
 | Scraper Fase 3 | playwright 1.x | Cron headless |
-| AI | Vercel AI SDK + openai | Scoring & cover letter |
+| AI | OpenAI-compatible LLM (provider-agnostic) | DeepSeek/Groq/Ollama/OpenRouter via `LLM_BASE_URL`; NOT OpenAI/Gemini; heuristic fallback if no key |
 | Email | resend 4.x | + nodemailer fallback |
 | Kanban | @dnd-kit/core + sortable | Drag drop |
 | Icons | lucide-react | |

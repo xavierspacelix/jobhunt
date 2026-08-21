@@ -79,8 +79,8 @@
   --sidebar-foreground: #1C1917;
   --sidebar-primary: #1C1917;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F5F1EA;
-  --sidebar-accent-foreground: #1C1917;
+  --sidebar-accent: #EEF2FF;
+  --sidebar-accent-foreground: #4F46E5;
   --sidebar-border: #E7E5E4;
   --sidebar-ring: #4F46E5;
 }
@@ -114,8 +114,8 @@
   --sidebar-foreground: #FAF8F4;
   --sidebar-primary: #FAF8F4;
   --sidebar-primary-foreground: #1C1917;
-  --sidebar-accent: #2A2620;
-  --sidebar-accent-foreground: #FAF8F4;
+  --sidebar-accent: rgba(99, 102, 241, 0.18);
+  --sidebar-accent-foreground: #C7D2FE;
   --sidebar-border: #3F3A34;
   --sidebar-ring: #6366F1;
   color-scheme: dark;

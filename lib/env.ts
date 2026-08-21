@@ -9,6 +9,15 @@ export const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
+  MINIO_ENDPOINT: z.string().optional(),
+  MINIO_PORT: z.coerce.number().optional(),
+  MINIO_ACCESS_KEY: z.string().optional(),
+  MINIO_SECRET_KEY: z.string().optional(),
+  MINIO_BUCKET: z.string().optional(),
+  MINIO_USE_SSL: z.enum(["true", "false"]).optional(),
+  LLM_BASE_URL: z.string().url().optional(),
+  LLM_API_KEY: z.string().optional(),
+  LLM_MODEL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

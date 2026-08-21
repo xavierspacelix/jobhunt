@@ -5,7 +5,7 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 ## Current Status
 
 - Phase: Phase 1 - Foundation
-- In progress: none
+- In progress: 02 - CV Upload & Parse (PDF)
 - Last completed: 01 - Foundation, Auth & DB
 - Next: Feature 02 - CV Upload & Parse (PDF)
 
@@ -14,7 +14,7 @@ Update whenever feature status changes. Only one feature `in progress` unless ex
 | ID | Feature | Specification | Status |
 |---|---|---|---|
 | 01 | Foundation, Auth & DB | `features/01-foundation-auth-db.md` | complete |
-| 02 | CV Upload & Parse (PDF) | `features/02-cv-upload-parse.md` | planned |
+| 02 | CV Upload & Parse (PDF) | `features/02-cv-upload-parse.md` | in progress |
 | 03 | Job Fetch Paste URL (Glints & Jobstreet) | `features/03-job-fetch.md` | planned |
 | 04 | Application Tracker (Kanban) | `features/04-tracker-kanban.md` | planned |
 | 05 | AI Matching Score | `features/05-ai-matching.md` | planned |
@@ -32,6 +32,9 @@ Allowed status: `planned`, `in progress`, `blocked`, `complete`.
 - Paste-URL fetch first, cron later.
 - Semi-auto via Resend, no auto-login bot.
 - AI scoring cache per profile+job.
+- CV storage: user-run MinIO (S3-compatible); local-disk fallback when `MINIO_*` unset.
+- CV extraction: provider-agnostic OpenAI-compatible LLM (`LLM_BASE_URL`); NOT OpenAI/Gemini; heuristic fallback when key absent.
+- CV extraction field set = Glints-style profile (fullName, headline, location, email, phone, skills, summary, experience, education, certifications, links); hasil bisa diedit via PUT /api/profile (inline edit di /profile).
 
 ## Blockers
 

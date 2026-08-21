@@ -37,5 +37,5 @@ export async function registerAction(
   await prisma.user.create({ data: { email, passwordHash } });
 
   await signIn("credentials", { email, password, redirect: false });
-  redirect("/");
+  redirect("/dashboard");
 }
