@@ -4,12 +4,12 @@
 Setup Next.js 16 + Prisma + Auth agar semua fitur punya fondasi aman multi-user.
 
 ## User Outcome
-User bisa register/login (email + Google), akses halaman protected, data terisolasi per user.
+User bisa register/login (email + password), akses halaman protected, data terisolasi per user.
 
 ## In Scope
 - Next.js scaffold, Tailwind v4, shadcn init, tokens, layout
 - Prisma schema: User, Profile, Job, Application, EmailLog + migration
-- NextAuth v5 + PrismaAdapter, middleware, env validation (Zod)
+- NextAuth v5 Credentials (email+password) + JWT, middleware, env validation (Zod)
 - Seed script, health check /api/health
 
 ## Out Of Scope

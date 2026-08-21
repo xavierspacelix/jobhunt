@@ -15,8 +15,8 @@ Records approved deps. Not substitute for official docs.
 |---|---|---|
 | Framework | Next.js 16 App Router | SSR + API routes |
 | Language | TypeScript strict | |
-| DB | Prisma 7 + Postgres (Supabase) | SQLite fallback dev |
-| Auth | NextAuth v5 (Auth.js) + PrismaAdapter | Email + Google |
+| DB | Prisma 7 + Postgres (Supabase) | SQLite fallback dev; requires `@prisma/adapter-pg` driver adapter (Prisma 7 client has no bundled engine) |
+| Auth | NextAuth v5 (Auth.js) Credentials (email+password), JWT sessions | No PrismaAdapter (decision OD-005); Google/Email deferred |
 | Styling | Tailwind v4 + shadcn/ui | Tokens only |
 | Validation | Zod 3 | Env + request |
 | CV Parse | pdf-parse 1.x | PDF text extract |

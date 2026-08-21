@@ -15,7 +15,7 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 ### Feature 01: Foundation, Auth & DB
 - Next.js scaffold, layout, theming tokens
 - Prisma schema (User, Profile, Job, Application, EmailLog), migrations
-- NextAuth (email + Google), middleware protected routes
+- NextAuth (email+password Credentials), middleware protected routes
 - Seed & basic CRUD health check
 
 ## Phase 2: Core Data Ingestion
