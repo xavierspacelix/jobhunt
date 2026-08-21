@@ -6,7 +6,7 @@
 |---|---|---|
 | Frontend | Next.js 16 App Router + React 19 + TypeScript strict | UI, routing, SSR/CSR |
 | Styling | Tailwind CSS v4 + shadcn/ui | Design system, tokens |
-| Auth | NextAuth.js v5 (Auth.js) | Email + Google OAuth, session |
+| Auth | NextAuth.js v5 (Auth.js) | Email+password Credentials, JWT session |
 | DB | Prisma 7 ORM + Postgres (Supabase) / SQLite dev | Persistence, migrations |
 | CV Parse | pdf-parse / pdfjs | Ekstrak teks PDF |
 | AI | Vercel AI SDK + OpenAI / Gemini | Scoring & cover letter |
@@ -76,7 +76,7 @@ Rules:
 
 ## Auth & Multi-User
 
-- NextAuth with PrismaAdapter.
+- NextAuth v5 Credentials provider (email+password), JWT sessions. No PrismaAdapter (decision OD-005).
 - Protected routes via middleware.
 - Every DB query scoped by `session.user.id` (never trust client id).
 - Row-level: Application & Profile always filter by userId.

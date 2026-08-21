@@ -10,7 +10,7 @@
 | OD-002 | LLM provider: OpenAI vs Gemini vs both; key management | 05,06 | open | Env & cost cap ADR |
 | OD-003 | Resend domain & sender address | 06 | open | Verify DNS |
 | OD-004 | Glints/Jobstreet parser selector stability | 03 | researching | Confirm cheerio selectors, fallback |
-| OD-005 | NextAuth providers: credentials vs Google only | 01 | open | Decide adapter config |
+| OD-005 | NextAuth providers: credentials vs Google only | 01 | closed | Resolved: email+password Credentials provider, JWT sessions, no PrismaAdapter (simpler, "nothing fancy"). Google/Email magic-link deferred to later feature when OAuth/Resend creds exist. |
 
 ## Before Feature
 
