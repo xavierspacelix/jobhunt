@@ -6,7 +6,7 @@ ENV NODE_ENV=production
 
 FROM base AS deps
 COPY package.json yarn.lock* ./
-RUN corepack enable && yarn install --frozen-lockfile
+RUN corepack enable && yarn install --network-timeout 600000
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
