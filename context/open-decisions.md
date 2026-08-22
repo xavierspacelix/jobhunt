@@ -20,7 +20,7 @@
 | OD-007 | Cover letter tone template (formal vs casual ID) | 06 | closed |
 | OD-008 | Kanban lib: dnd-kit vs pragmatic-drag | 04 | open |
 | OD-009 | Rate limit thresholds for AI scoring | 05 | closed | Resolved: 10 req/min per user (fixed window, in-memory) |
-| OD-010 | Cron schedule & keyword strategy for Fase 3 | 08 | deferred |
+| OD-010 | Cron schedule & keyword strategy for Fase 3 | 08 | closed | Resolved: schedule tiap 6 jam (maksimal per AGENTS invariant); keyword = top 5 `Profile.skills`; batch 20/user/run; 429 exponential backoff (base 5s, 3 retry). Deploy via Docker (bukan Vercel): service `cron` jalan sebagai Node scheduler (`scripts/cron-runner.ts`), bukan OS cron, agar env `DATABASE_URL` ter-inject. Tanpa container Postgres (DB eksternal). |
 
 ## Deferred Beyond MVP
 

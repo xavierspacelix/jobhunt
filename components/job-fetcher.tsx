@@ -20,6 +20,7 @@ import {
   Trash2Icon,
   EyeIcon,
   SparklesIcon,
+  RefreshCwIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MatchDialog } from "@/components/match-dialog"
@@ -164,6 +165,9 @@ export function JobFetcher() {
   const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [detailJob, setDetailJob] = React.useState<SavedJob | null>(null)
+  const [tab, setTab] = React.useState<"saved" | "recommended">("saved")
+  const [recommendedJobs, setRecommendedJobs] = React.useState<SavedJob[]>([])
+  const [refreshing, setRefreshing] = React.useState(false)
 
   const loadJobs = React.useCallback(async () => {
     try {
@@ -187,10 +191,34 @@ export function JobFetcher() {
     }
   }, [])
 
+  const loadRecommended = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/jobs/recommended")
+      if (res.ok) {
+        const data = await res.json()
+        setRecommendedJobs(data.jobs ?? [])
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  async function handleRefreshRecommendations() {
+    setRefreshing(true)
+    try {
+      await fetch("/api/cron/scrape", { method: "POST" })
+      await loadRecommended()
+      await loadJobs()
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadJobs()
-  }, [loadJobs])
+    loadRecommended()
+  }, [loadJobs, loadRecommended])
 
   async function handleFetch(e: React.FormEvent) {
     e.preventDefault()
@@ -312,6 +340,7 @@ export function JobFetcher() {
   }
 
   const cd = draft?.companyDetails
+  const displayJobs = tab === "recommended" ? recommendedJobs : jobs
   const jobCoreRows = draft
     ? [
         { label: "Title", value: draft.title },
@@ -473,19 +502,61 @@ export function JobFetcher() {
       )}
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-foreground">
-          Tersimpan ({jobs.length})
-        </h2>
-        {jobs.length === 0 ? (
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+            <button
+              type="button"
+              onClick={() => setTab("saved")}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                tab === "saved"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Tersimpan ({jobs.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("recommended")}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                tab === "recommended"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Rekomendasi Untukmu ({recommendedJobs.length})
+            </button>
+          </div>
+          {tab === "recommended" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshRecommendations}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <Loader2Icon className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCwIcon className="size-3.5" />
+              )}
+              Refresh rekomendasi
+            </Button>
+          )}
+        </div>
+        {displayJobs.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
             <BriefcaseIcon className="size-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Belum ada lowongan tersimpan.
+              {tab === "recommended"
+                ? "Belum ada rekomendasi. Klik Refresh untuk mencari lowongan dari skill kamu."
+                : "Belum ada lowongan tersimpan."}
             </p>
           </div>
         ) : (
           <ul className="flex flex-col gap-3">
-            {jobs.map((job) => (
+            {displayJobs.map((job) => (
               <li
                 key={job.id}
                 className="rounded-xl border border-border bg-card p-4"

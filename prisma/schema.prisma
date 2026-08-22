@@ -37,6 +37,7 @@ model User {
   profile      Profile?
   applications Application[]
   matches      Match[]
+  recommendations Recommendation[]
 }
 
 model Profile {
@@ -86,6 +87,7 @@ model Job {
 
   applications Application[]
   matches      Match[]
+  recommendations Recommendation[]
 }
 
 model Application {
@@ -140,4 +142,17 @@ model EmailLog {
   providerMsgId String?
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model Recommendation {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  score     Int?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
 }

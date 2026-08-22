@@ -1,0 +1,26 @@
+# App + Docker cron. No Postgres container — uses your external DB via DATABASE_URL.
+# Build & run:  docker compose up --build -d
+# Run migrations on your DB first:  docker compose run --rm app yarn prisma migrate deploy
+# Manual one-shot scrape:          docker compose run --rm cron ./node_modules/.bin/tsx scripts/cron-scrape.ts
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  cron:
+    build: .
+    command: ["./node_modules/.bin/tsx", "scripts/cron-runner.ts"]
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=production
+    restart: unless-stopped

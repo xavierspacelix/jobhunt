@@ -23,7 +23,9 @@ Records approved deps. Not substitute for official docs.
 | Object Storage | minio 8.x | CV PDF blobs (S3-compatible, user-run MinIO); local-disk fallback when unset |
 | Scraper MVP | cheerio 1.x | HTML parse |
 | Scraper render | playwright 1.x (local Chromium) | Paste-URL fetch: native fetch dulu, fallback ke local headless browser bila 403/Cloudflare (Browserbase ditolak, tidak tersedia di Indonesia) |
-| Scraper Fase 3 | playwright 1.x | Cron headless |
+| Scraper Fase 3 | playwright 1.x | Cron headless (search page render) |
+| Cron scheduler | Node `setInterval` di `scripts/cron-runner.ts` | Bukan OS cron / Vercel Cron — agar env `DATABASE_URL` ter-inject di container Docker. Tidak menambah npm dep (pakai `tsx` yang sudah ada). |
+| Deploy | Docker + Compose | `Dockerfile` + `docker-compose.yml` (`app` + `cron`), tanpa container Postgres (DB eksternal). Image install Chromium via `playwright install --with-deps`. |
 | AI | OpenAI-compatible LLM (provider-agnostic) | DeepSeek/Groq/Ollama/OpenRouter via `LLM_BASE_URL`; NOT OpenAI/Gemini; heuristic fallback if no key |
 | Email | resend 4.x | + nodemailer fallback |
 | Kanban | @dnd-kit/core + sortable | Drag drop |
