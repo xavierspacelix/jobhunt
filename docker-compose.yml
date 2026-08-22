@@ -13,7 +13,7 @@ services:
       - NODE_ENV=production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.xavier-app.rule=Host(`spacelix.qzz.io`)"
+      - "traefik.http.routers.xavier-app.rule=Host(`jobhunt.spacelix.qzz.io`)"
       - "traefik.http.routers.xavier-app.entrypoints=websecure"
       - "traefik.http.routers.xavier-app.tls=true"
       - "traefik.http.services.xavier-app.loadbalancer.server.port=3000"
