@@ -31,6 +31,18 @@ function blankToNull(v?: string): string | null {
   return v && v.trim() !== "" ? v.trim() : null
 }
 
+function stripNulls<T>(value: T): unknown {
+  if (Array.isArray(value)) return value.map((v) => stripNulls(v))
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== null) out[k] = stripNulls(v)
+    }
+    return out
+  }
+  return value
+}
+
 export const POST = auth(async (req) => {
   const email = req.auth?.user?.email
   if (!email) {
@@ -38,7 +50,7 @@ export const POST = auth(async (req) => {
   }
 
   const json = await req.json().catch(() => null)
-  const parsed = jobInput.safeParse(json)
+  const parsed = jobInput.safeParse(stripNulls(json))
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Data lowongan tidak valid", issues: parsed.error.flatten() },
