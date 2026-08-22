@@ -22,19 +22,6 @@ services:
     restart: unless-stopped
     networks:
       - traefik-public
-
-  dev:
-    image: node:24-alpine
-    working_dir: /app
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: sh -c "corepack enable && yarn install --production=false && yarn build && NODE_ENV=production yarn start"
-
 networks:
   traefik-public:
     external: true
