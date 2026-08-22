@@ -24,6 +24,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { StatusBadge } from "@/components/status-badge"
 import {
   STATUS_ORDER,
   STATUS_LABELS,
@@ -82,22 +83,6 @@ function SourceBadge({ source }: { source: Source }) {
       )}
     >
       {source === "GLINTS" ? "Glints" : "Jobstreet"}
-    </span>
-  )
-}
-
-function StatusBadge({ status }: { status: AppStatus }) {
-  const color = STATUS_VAR[status]
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-      style={{
-        color,
-        backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)`,
-      }}
-    >
-      <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
-      {STATUS_LABELS[status]}
     </span>
   )
 }
