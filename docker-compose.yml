@@ -1,26 +1,38 @@
-# App + Docker cron. No Postgres container — uses your external DB via DATABASE_URL.
-# Build & run:  docker compose up --build -d
-# Run migrations on your DB first:  docker compose run --rm app yarn prisma migrate deploy
-# Manual one-shot scrape:          docker compose run --rm cron ./node_modules/.bin/tsx scripts/cron-scrape.ts
+# App + dev. No cron — job search is on-demand from the Lowongan page.
+# Build & run (prod via Traefik):  docker compose up --build -d
+# Run migrations on your DB first:  docker compose run --rm web yarn prisma migrate deploy
+# Local prod mode (build + start): docker compose run --rm dev   (or: docker compose up dev)
+# One-shot manual search is done from the UI ("Cari Lowongan"), no separate cron service.
 
 services:
-  app:
+  web:
     build: .
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.xavier-app.rule=Host(`spacelix.qzz.io`)"
+      - "traefik.http.routers.xavier-app.entrypoints=websecure"
+      - "traefik.http.routers.xavier-app.tls=true"
+      - "traefik.http.services.xavier-app.loadbalancer.server.port=3000"
+    restart: unless-stopped
+    networks:
+      - traefik-public
+
+  dev:
+    image: node:20-alpine
+    working_dir: /app
     ports:
       - "3000:3000"
-    env_file:
-      - .env
     environment:
-      - DATABASE_URL=${DATABASE_URL}
       - NODE_ENV=production
-    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "corepack enable && yarn install && yarn build && yarn start"
 
-  cron:
-    build: .
-    command: ["./node_modules/.bin/tsx", "scripts/cron-runner.ts"]
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NODE_ENV=production
-    restart: unless-stopped
+networks:
+  traefik-public:
+    external: true

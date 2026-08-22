@@ -2,6 +2,13 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import Link from "next/link"
 import { AppSidebar } from "@/components/app-sidebar"
+import { StatCard } from "@/components/stat-card"
+import { StatusDistribution } from "@/components/status-distribution"
+import {
+  ReminderList,
+  type AnalyticsApplication,
+} from "@/components/reminder-list"
+import type { AppStatus } from "@/lib/kanban"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,14 +22,14 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
-  FileTextIcon,
-  UploadCloudIcon,
-  SparklesIcon,
   BriefcaseIcon,
-  TargetIcon,
   CheckCircle2Icon,
   CircleIcon,
-  ArrowRightIcon,
+  FileTextIcon,
+  SendIcon,
+  TrophyIcon,
+  UploadCloudIcon,
+  UsersIcon,
 } from "lucide-react"
 
 type ExperienceEntry = {
@@ -30,6 +37,8 @@ type ExperienceEntry = {
   company?: string
   period?: string
 }
+
+export const dynamic = "force-dynamic"
 
 export default async function Page() {
   const session = await auth()
@@ -54,8 +63,44 @@ export default async function Page() {
 
   const checks = [hasCV, Boolean(summary), skillsCount > 0, experienceCount > 0]
   const completeness = Math.round(
-    (checks.filter(Boolean).length / checks.length) * 100
+    (checks.filter(Boolean).length / checks.length) * 100,
   )
+
+  const applications = email
+    ? await prisma.application.findMany({
+        where: { user: { email } },
+        select: {
+          id: true,
+          status: true,
+          nextFollowUpAt: true,
+          job: {
+            select: { title: true, company: true, sourceUrl: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : []
+
+  const analyticsApplications: AnalyticsApplication[] = applications.map((a) => ({
+    id: a.id,
+    status: a.status as AppStatus,
+    nextFollowUpAt: a.nextFollowUpAt?.toISOString() ?? null,
+    job: {
+      title: a.job.title,
+      company: a.job.company,
+      sourceUrl: a.job.sourceUrl,
+    },
+  }))
+
+  const total = applications.length
+  const applied = analyticsApplications.filter((a) =>
+    ["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(a.status),
+  ).length
+  const interviews = analyticsApplications.filter(
+    (a) => a.status === "INTERVIEW",
+  ).length
+  const offers = analyticsApplications.filter((a) => a.status === "OFFER").length
+  const interviewRate = applied > 0 ? Math.round((interviews / applied) * 100) : 0
 
   const today = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
@@ -63,40 +108,6 @@ export default async function Page() {
     month: "long",
     year: "numeric",
   })
-
-  const steps = [
-    {
-      title: "Unggah CV",
-      description: "Ekstrak skill, ringkasan, dan pengalaman otomatis.",
-      done: hasCV,
-      href: "/profile",
-    },
-    {
-      title: "Lengkapi ringkasan",
-      description: "Pastikan ringkasan profil mencerminkan profilmu.",
-      done: Boolean(summary),
-      href: "/profile",
-    },
-    {
-      title: "Tambah skill",
-      description: "Semakin lengkap, rekomendasi makin akurat.",
-      done: skillsCount > 0,
-      href: "/profile",
-    },
-    {
-      title: "Catat pengalaman",
-      description: "Tambahkan riwayat pekerjaan terdeteksi.",
-      done: experienceCount > 0,
-      href: "/profile",
-    },
-    {
-      title: "Cari lowongan",
-      description: "Rekomendasi lowongan Glints & Jobstreet.",
-      done: false,
-      href: "#",
-      soon: true,
-    },
-  ]
 
   return (
     <SidebarProvider>
@@ -126,8 +137,9 @@ export default async function Page() {
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-          <section className="rounded-xl border border-border bg-card p-5 md:p-6">
+        <div className="flex flex-1 flex-col gap-6 p-6 md:gap-8 md:p-8">
+          {/* Hero */}
+          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{today}</p>
@@ -135,12 +147,14 @@ export default async function Page() {
                   Halo, {firstName}
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Ringkasan persiapan lamaran dan profil kamu.
+                  Ini ringkasan persiapan dan progres lamaran kamu.
                 </p>
               </div>
               <div className="w-full max-w-xs">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Kelengkapan Profil</span>
+                  <span className="text-muted-foreground">
+                    Kelengkapan Profil
+                  </span>
                   <span className="font-medium text-foreground">
                     {completeness}%
                   </span>
@@ -155,87 +169,72 @@ export default async function Page() {
             </div>
           </section>
 
+          {/* KPI row */}
           <div className="grid auto-rows-min gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              icon={<FileTextIcon />}
-              label="CV Teranalisis"
-              value={hasCV ? "Ya" : "Belum"}
-            />
-            <StatCard
               icon={<BriefcaseIcon />}
-              label="Pengalaman"
-              value={String(experienceCount)}
+              label="Total Lamaran"
+              value={String(total)}
             />
             <StatCard
-              icon={<SparklesIcon />}
-              label="Keahlian"
-              value={String(skillsCount)}
+              icon={<SendIcon />}
+              label="Terkirim"
+              value={String(applied)}
             />
             <StatCard
-              icon={<TargetIcon />}
-              label="Kelengkapan"
-              value={`${completeness}%`}
+              icon={<UsersIcon />}
+              label="Wawancara"
+              value={String(interviews)}
+              hint={applied > 0 ? `${interviewRate}% dari terkirim` : undefined}
+            />
+            <StatCard
+              icon={<TrophyIcon />}
+              label="Penawaran"
+              value={String(offers)}
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <section className="rounded-xl border border-border bg-card p-5 lg:col-span-2">
-              <h2 className="text-sm font-medium text-foreground">
-                Langkah Selanjutnya
-              </h2>
-              <ul className="mt-4 space-y-3">
-                {steps.map((step) => (
-                  <li
-                    key={step.title}
-                    className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
-                  >
-                    {step.done ? (
-                      <CheckCircle2Icon className="mt-0.5 size-5 shrink-0 text-accent" />
-                    ) : (
-                      <CircleIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-foreground">
-                          {step.title}
-                        </p>
-                        {step.soon && (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                            Segera
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {step.description}
-                      </p>
-                    </div>
-                    {!step.soon && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        render={<Link href={step.href} />}
-                        className="shrink-0"
-                      >
-                        {step.done ? "Lihat" : "Mulai"}
-                        <ArrowRightIcon />
-                      </Button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {/* Bento: analytics + profile */}
+          <div className="grid gap-6 md:gap-8 lg:grid-cols-3">
+            <div className="flex flex-col gap-6 md:gap-8 lg:col-span-2">
+              <StatusDistribution applications={analyticsApplications} />
+              <ReminderList applications={analyticsApplications} />
+            </div>
 
-            <section className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-sm font-medium text-foreground">
-                Ringkasan CV
-              </h2>
+            <section className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="flex size-8 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                  <FileTextIcon className="size-4" />
+                </span>
+                <h2 className="text-sm font-medium text-foreground">
+                  Profil &amp; CV
+                </h2>
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                <ProfileRow
+                  done={hasCV}
+                  label="CV teranalisis"
+                  value={hasCV ? "Ya" : "Belum"}
+                />
+                <ProfileRow
+                  done={skillsCount > 0}
+                  label="Keahlian terdeteksi"
+                  value={String(skillsCount)}
+                />
+                <ProfileRow
+                  done={experienceCount > 0}
+                  label="Pengalaman tercatat"
+                  value={String(experienceCount)}
+                />
+              </div>
+
               {summary ? (
-                <p className="mt-3 text-sm text-muted-foreground">{summary}</p>
-              ) : (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Belum ada ringkasan. Unggah CV untuk membuatnya.
+                <p className="mt-4 line-clamp-3 text-sm text-muted-foreground">
+                  {summary}
                 </p>
-              )}
+              ) : null}
+
               <div className="mt-4 flex flex-col gap-2">
                 <Button variant="cta" render={<Link href="/profile" />}>
                   <UploadCloudIcon />
@@ -248,76 +247,32 @@ export default async function Page() {
               </div>
             </section>
           </div>
-
-          {skills.length > 0 && (
-            <section className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-sm font-medium text-foreground">
-                Keahlian ({skills.length})
-              </h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {experiences.length > 0 && (
-            <section className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-sm font-medium text-foreground">Pengalaman</h2>
-              <ul className="mt-4 space-y-4">
-                {experiences.map((exp, i) => (
-                  <li
-                    key={i}
-                    className="relative border-l-2 border-accent/40 pl-4"
-                  >
-                    <p className="font-medium text-foreground">
-                      {exp.role ?? exp.company ?? "Pengalaman"}
-                    </p>
-                    {exp.company && exp.role && (
-                      <p className="text-sm text-muted-foreground">
-                        {exp.company}
-                      </p>
-                    )}
-                    {exp.period && (
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {exp.period}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </div>
       </SidebarInset>
     </SidebarProvider>
   )
 }
 
-function StatCard({
-  icon,
+function ProfileRow({
+  done,
   label,
   value,
 }: {
-  icon: React.ReactNode
+  done: boolean
   label: string
   value: string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <span className="flex size-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
-          {icon}
-        </span>
-        <span className="text-sm">{label}</span>
-      </div>
-      <p className="mt-3 text-2xl font-semibold text-foreground">{value}</p>
+    <div className="flex items-center justify-between text-sm">
+      <span className="flex items-center gap-2 text-muted-foreground">
+        {done ? (
+          <CheckCircle2Icon className="size-4 text-accent" />
+        ) : (
+          <CircleIcon className="size-4 text-muted-foreground" />
+        )}
+        {label}
+      </span>
+      <span className="font-medium text-foreground">{value}</span>
     </div>
   )
 }

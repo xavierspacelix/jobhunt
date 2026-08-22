@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/db"
 import { AppSidebar } from "@/components/app-sidebar"
 import { JobFetcher } from "@/components/job-fetcher"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -14,9 +15,18 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { BriefcaseIcon } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function JobsPage() {
   const session = await auth()
   const email = session?.user?.email ?? undefined
+  const profile = email
+    ? await prisma.user.findUnique({
+        where: { email },
+        select: { profile: { select: { skills: true } } },
+      })
+    : null
+  const defaultKeywords = profile?.profile?.skills ?? []
 
   return (
     <SidebarProvider>
@@ -60,7 +70,7 @@ export default async function JobsPage() {
               <BriefcaseIcon className="size-10 text-accent" />
             </div>
           </section>
-          <JobFetcher />
+          <JobFetcher defaultKeywords={defaultKeywords} />
         </main>
       </SidebarInset>
     </SidebarProvider>

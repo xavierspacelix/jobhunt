@@ -1,0 +1,74 @@
+import { NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/db"
+import { parseKeywords, profileKeywords, runJobSearch, type SearchEvent } from "@/lib/job-search"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const maxDuration = 300
+
+async function readBodyKeywords(req: Request): Promise<string[] | null> {
+  const json = await req.json().catch(() => null)
+  if (!json) return []
+  if (Array.isArray(json.keywords)) return json.keywords
+  if (typeof json.keywords === "string") return json.keywords
+  if (typeof json.query === "string") return json.query
+  return []
+}
+
+export const POST = auth(async (req) => {
+  const email = req.auth?.user?.email
+  if (!email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  let keywords = parseKeywords(await readBodyKeywords(req))
+  if (keywords.length === 0) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { profile: { select: { skills: true, headline: true, experience: true } } },
+    })
+    keywords = profileKeywords(user?.profile ?? null)
+  }
+  if (keywords.length === 0) {
+    return NextResponse.json(
+      { error: "Masukkan kata kunci atau lengkapi skill di profil." },
+      { status: 400 },
+    )
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  })
+  if (!user) {
+    return NextResponse.json({ error: "User tidak ditemukan" }, { status: 401 })
+  }
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (e: SearchEvent) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`))
+      try {
+        send({ type: "start" })
+        await runJobSearch(user.id, keywords, send)
+      } catch (err) {
+        send({
+          type: "error",
+          message: err instanceof Error ? err.message : "Pencarian gagal",
+        })
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  })
+})
