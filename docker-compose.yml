@@ -15,10 +15,10 @@ services:
       - NODE_ENV=production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.xavier-app.rule=Host(`jobhunt.spacelix.qzz.io`)"
-      - "traefik.http.routers.xavier-app.entrypoints=websecure"
-      - "traefik.http.routers.xavier-app.tls=true"
-      - "traefik.http.services.xavier-app.loadbalancer.server.port=3000"
+      - "traefik.http.routers.jobhunt-app.rule=Host(`jobhunt.spacelix.qzz.io`)"
+      - "traefik.http.routers.jobhunt-app.entrypoints=websecure"
+      - "traefik.http.routers.jobhunt-app.tls=true"
+      - "traefik.http.services.jobhunt-app.loadbalancer.server.port=3000"
     restart: unless-stopped
     networks:
       - traefik-public

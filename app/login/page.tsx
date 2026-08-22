@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
-import { loginAction } from "./actions";
+import { Check, ArrowRight, Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/brand-logo";
@@ -15,7 +15,27 @@ const steps = [
 ];
 
 export default function LoginPage() {
-  const [state, formAction] = useActionState(loginAction, {});
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+    if (res?.error) {
+      setError("Email atau password salah.");
+      setLoading(false);
+      return;
+    }
+    window.location.href = "/dashboard";
+  }
 
   return (
     <main className="relative grid min-h-screen lg:grid-cols-2">
@@ -54,7 +74,7 @@ export default function LoginPage() {
 
       <section className="flex items-center justify-center bg-background p-6">
         <form
-          action={formAction}
+          onSubmit={handleSubmit}
           className="w-full max-w-sm space-y-5 rounded-2xl border border-border bg-card p-8 shadow-sm"
         >
           <div className="space-y-1">
@@ -71,6 +91,8 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               className="w-full cursor-text rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -85,16 +107,18 @@ export default function LoginPage() {
               name="password"
               type="password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full cursor-text rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
-          {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <Button type="submit" variant="cta" className="w-full !h-11 text-base">
+          <Button type="submit" variant="cta" className="w-full !h-11 text-base" disabled={loading}>
+            {loading ? <Loader2Icon className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
             Masuk
-            <ArrowRight className="size-4" />
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
