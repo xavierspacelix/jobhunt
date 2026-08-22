@@ -30,12 +30,10 @@ services:
       - "3000:3000"
     env_file:
       - .env
-    environment:
-      - NODE_ENV=production
     volumes:
       - .:/app
       - /app/node_modules
-    command: sh -c "corepack enable && yarn install && yarn build && yarn start"
+    command: sh -c "corepack enable && yarn install --production=false && yarn build && NODE_ENV=production yarn start"
 
 networks:
   traefik-public:

@@ -2,7 +2,6 @@
 
 FROM node:24-slim AS base
 WORKDIR /app
-ENV NODE_ENV=production
 
 FROM base AS deps
 COPY package.json yarn.lock* ./
@@ -15,6 +14,7 @@ RUN yarn prisma generate
 RUN yarn build
 
 FROM base AS runner
+ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
