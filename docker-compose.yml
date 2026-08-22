@@ -1,7 +1,7 @@
 # App + dev. No cron — job search is on-demand from the Lowongan page.
 # Build & run (prod via Traefik):  docker compose up --build -d
 # Run migrations on your DB first:  docker compose run --rm web yarn prisma migrate deploy
-# Local prod mode (build + start): docker compose run --rm dev   (or: docker compose up dev)
+# Local prod mode (build + start): docker compose up --build -d
 # One-shot manual search is done from the UI ("Cari Lowongan"), no separate cron service.
 
 services:
