@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
+import { scoreMatch } from "@/lib/match"
 
 export const runtime = "nodejs"
 
@@ -45,6 +46,14 @@ export const POST = auth(async (req) => {
     )
   }
   const data = parsed.data
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  })
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
 
   const title = blankToNull(data.title)!
   const company = data.company?.trim() || ""
@@ -106,36 +115,38 @@ export const POST = auth(async (req) => {
     },
   })
 
-  return NextResponse.json({ job })
-})
+  await prisma.recommendation.upsert({
+    where: { userId_jobId: { userId: user.id, jobId: job.id } },
+    update: {},
+    create: { userId: user.id, jobId: job.id },
+  })
 
-export const GET = auth(async (req) => {
-  const email = req.auth?.user?.email
-  if (!email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const profile = await prisma.profile.findUnique({
+    where: { userId: user.id },
+  })
+
+  let matchScore: number | null = null
+  if (profile) {
+    const result = await scoreMatch(profile, job)
+    matchScore = result.score
+    await prisma.match.upsert({
+      where: { userId_jobId: { userId: user.id, jobId: job.id } },
+      update: {
+        score: result.score,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        source: result.source,
+      },
+      create: {
+        userId: user.id,
+        jobId: job.id,
+        score: result.score,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        source: result.source,
+      },
+    })
   }
-  const jobs = await prisma.job.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  })
 
-  const matches = await prisma.match.findMany({
-    where: { user: { email } },
-    select: { jobId: true, score: true },
-  })
-  const scoreByJob = new Map(matches.map((m) => [m.jobId, m.score]))
-
-  const recs = await prisma.recommendation.findMany({
-    where: { user: { email } },
-    select: { jobId: true },
-  })
-  const autoJobIds = new Set(recs.map((r) => r.jobId))
-
-  const jobsWithScore = jobs.map((job) => ({
-    ...job,
-    matchScore: scoreByJob.get(job.id) ?? null,
-    origin: autoJobIds.has(job.id) ? "auto" : "manual",
-  }))
-
-  return NextResponse.json({ jobs: jobsWithScore })
+  return NextResponse.json({ ok: true, jobId: job.id, matchScore })
 })

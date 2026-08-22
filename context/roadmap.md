@@ -13,7 +13,7 @@ Track post-MVP. Jangan kerjakan sebelum MVP 01-07 selesai + gates pass.
 | 05 | AI Matching | `features/05-ai-matching.md` | planned |
 | 06 | Email & Cover Letter | `features/06-email-coverletter.md` | planned |
 | 07 | Dashboard & Analytics | `features/07-dashboard-analytics.md` | planned |
-| 08 | Cron Scraper & Rekomendasi | `features/08-cron-scraper.md` | planned |
+| 08 | On-demand Job Search & Recommendations | `features/08-job-search.md` | planned |
 
 ## Post-MVP Candidates
 
