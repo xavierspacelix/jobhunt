@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import Link from "next/link"
-import { AppSidebar } from "@/components/app-sidebar"
+import { AuthenticatedShell } from "@/components/authenticated-shell"
 import { StatCard } from "@/components/stat-card"
 import { StatusDistribution } from "@/components/status-distribution"
 import {
@@ -9,17 +9,7 @@ import {
   type AnalyticsApplication,
 } from "@/components/reminder-list"
 import type { AppStatus } from "@/lib/kanban"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ExtensionDownloadButton } from "@/components/extension-download-button"
 import { Button } from "@/components/ui/button"
 import {
   BriefcaseIcon,
@@ -110,34 +100,13 @@ export default async function Page() {
   })
 
   return (
-    <SidebarProvider>
-      <AppSidebar userEmail={email} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-vertical:h-4 data-vertical:self-auto"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">JobHunter</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="ml-auto flex items-center gap-2 pr-4">
-            <ThemeToggle />
-          </div>
-        </header>
-
-        <div className="flex flex-1 flex-col gap-6 p-6 md:gap-8 md:p-8">
+    <AuthenticatedShell
+      pageLabel="Dashboard"
+      userEmail={email}
+      headerActions={
+        user?.extensionDownloadedAt ? null : <ExtensionDownloadButton />
+      }
+    >
           {/* Hero */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -247,9 +216,7 @@ export default async function Page() {
               </div>
             </section>
           </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    </AuthenticatedShell>
   )
 }
 

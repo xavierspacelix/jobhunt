@@ -22,11 +22,15 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      aria-label="Toggle theme"
+      aria-label={isDark ? "Aktifkan tema terang" : "Aktifkan tema gelap"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="text-foreground"
     >
-      {mounted && isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+      {mounted && isDark ? (
+        <Sun className="size-5" />
+      ) : (
+        <Moon className="size-5" />
+      )}
     </Button>
   );
 }

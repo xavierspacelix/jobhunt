@@ -1,17 +1,77 @@
-type Bucket = { count: number; resetAt: number }
+type Bucket = { count: number; resetAt: number };
 
-const buckets = new Map<string, Bucket>()
-const WINDOW_MS = 60_000
-const MAX = 10
+export type FixedWindowOptions = {
+  limit: number;
+  windowMs: number;
+  now?: () => number;
+};
 
-export function rateLimit(key: string): boolean {
-  const now = Date.now()
-  const b = buckets.get(key)
-  if (!b || b.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS })
-    return true
+export function createFixedWindowRateLimiter({
+  limit,
+  windowMs,
+  now = Date.now,
+}: FixedWindowOptions): (key: string) => boolean {
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error("Rate-limit maximum must be a positive integer");
   }
-  if (b.count >= MAX) return false
-  b.count += 1
-  return true
+  if (!Number.isInteger(windowMs) || windowMs <= 0) {
+    throw new Error("Rate-limit window must be a positive integer");
+  }
+
+  const buckets = new Map<string, Bucket>();
+  return (key: string) => {
+    const currentTime = now();
+    const bucket = buckets.get(key);
+    if (!bucket || bucket.resetAt <= currentTime) {
+      buckets.set(key, { count: 1, resetAt: currentTime + windowMs });
+      return true;
+    }
+    if (bucket.count >= limit) return false;
+    bucket.count += 1;
+    return true;
+  };
 }
+
+function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const windowMs = positiveInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000);
+
+export const matchRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_MATCH_MAX, 10),
+  windowMs,
+});
+export const coverLetterRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_COVER_LETTER_MAX, 10),
+  windowMs,
+});
+export const cvUploadRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_CV_UPLOAD_MAX, 10),
+  windowMs,
+});
+export const jobSearchRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_JOB_SEARCH_MAX, 10),
+  windowMs,
+});
+export const jobFetchRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_JOB_FETCH_MAX, 10),
+  windowMs,
+});
+export const recommendKeywordsRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_RECOMMEND_KEYWORDS_MAX, 10),
+  windowMs,
+});
+export const recommendationSaveRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_RECOMMENDATION_SAVE_MAX, 10),
+  windowMs,
+});
+export const registerRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_REGISTER_MAX, 5),
+  windowMs,
+});
+export const loginRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_LOGIN_MAX, 10),
+  windowMs,
+});

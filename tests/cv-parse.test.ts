@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { extractCv, heuristicCv } from "../lib/llm";
 import { parsePdf } from "../lib/cv-parse";
 
@@ -70,9 +71,10 @@ test("extractCv uses heuristic fallback when LLM env is absent", async () => {
   }
 });
 
-test("parsePdf extracts text from a real PDF via pdf-parse", async () => {
-  const fixture = path.join(process.cwd(), "tests", "fixtures", "sample-cv.pdf");
-  if (!fs.existsSync(fixture)) return;
+test("parsePdf extracts text from the dependency's public PDF fixture", async () => {
+  const require = createRequire(import.meta.url);
+  const packageDir = path.dirname(require.resolve("pdf-parse/package.json"));
+  const fixture = path.join(packageDir, "test", "data", "01-valid.pdf");
   const text = await parsePdf(fs.readFileSync(fixture));
-  assert.ok(text.length > 0, "extracted text should be non-empty");
+  assert.ok(text.trim().length > 0);
 });

@@ -23,12 +23,23 @@ memperbaiki tiap field lalu Simpan.
 - AI auto-fill dari web (hanya parse CV upload)
 
 ## Acceptance Criteria
-- [ ] Upload PDF text-based sukses <10s, field terisi (skills/summary/experience minimal)
-- [ ] Reject non-PDF / >5MB dengan pesan jelas
-- [ ] PDF encrypted/locked -> error graceful
-- [ ] Parse fixture tested
-- [ ] PUT /api/profile menyimpan edit dan tampil setelah reload
-- [ ] Edit mode menampilkan input untuk semua field; Save persist
+- [x] Upload PDF text-based and extraction path covered; real-PDF fixture runs
+  when available (no universal live latency claim)
+- [x] Reject non-PDF / >5MB dengan pesan jelas
+- [x] PDF encrypted/locked -> error graceful
+- [x] Real PDF fixture test passes in this workspace
+- [x] PUT /api/profile menyimpan edit dan tampil setelah reload
+- [x] Supported fields, including email/empty arrays and education periods, can
+  be edited/cleared and persisted
 
 ## Dependencies
 - 01
+
+## Storage Behavior
+
+- Object key uses user ID plus UUID. Upload saves a new object before atomically
+  switching Profile; failures clean the new object and success cleans the old.
+- MinIO dipakai bila konfigurasi lengkap; fallback lokal ada di `uploads/cvs`.
+- Tidak ada version-history model; only one Profile key remains active.
+- Local reads use the authenticated Profile key and real-path containment.
+- Compose persists local fallback storage; MinIO E2E remains externally unverified.

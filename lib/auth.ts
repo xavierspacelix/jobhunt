@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-cookies";
+import { loginRateLimit } from "@/lib/rate-limit";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -35,12 +36,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (raw) => {
+      authorize: async (raw, request) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) {
           return null;
         }
         const { email, password } = parsed.data;
+        const forwardedFor = request.headers.get("x-forwarded-for");
+        const clientAddress = forwardedFor?.split(",")[0]?.trim() || "unknown";
+        if (
+          !loginRateLimit(`ip:${clientAddress}`) ||
+          !loginRateLimit(`email:${email.toLowerCase()}`)
+        ) {
+          return null;
+        }
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) {

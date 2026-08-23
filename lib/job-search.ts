@@ -253,7 +253,14 @@ export async function runJobSearch(
       total: targets.length,
       message: `Mengambil detail ${current}/${targets.length}`,
     })
-    const data = await scrapeJobDetail(url)
+    let data: ScrapedJob | null = null
+    try {
+      data = await scrapeJobDetail(url)
+    } catch {
+      blocked++
+      await sleep(MIN_INTERVAL_MS)
+      continue
+    }
     if (data) {
       if (onlyOpen && data.closed) {
         filtered++
@@ -334,7 +341,17 @@ async function scoreCandidates(
     }))
   }
   return mapWithConcurrency(candidates, 4, async (job) => {
-    const m: MatchResult = await scoreMatch(profile, job as unknown as Job)
+    let m: MatchResult
+    try {
+      m = await scoreMatch(profile, job as unknown as Job)
+    } catch {
+      m = {
+        score: 0,
+        matchedSkills: [],
+        missingSkills: job.skills,
+        source: "heuristic",
+      }
+    }
     return {
       job,
       match: {

@@ -1,164 +1,152 @@
-import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { z } from "zod"
-import { prisma } from "@/lib/db"
-import { scoreMatch } from "@/lib/match"
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { createMatchCacheKey, scoreMatch } from "@/lib/match";
+import { recommendationSaveRateLimit } from "@/lib/rate-limit";
+import { verifyJobPreview } from "@/lib/job-preview";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-const jobInput = z.object({
-  title: z.string().min(1).max(300),
-  company: z.string().max(300).optional(),
-  location: z.string().max(300).optional(),
-  salary: z.string().max(200).optional(),
-  source: z.enum(["GLINTS", "JOBSTREET"]),
-  sourceUrl: z.string().url(),
-  description: z.string().max(50000).optional(),
-  postedAt: z.string().optional(),
-  employmentType: z.string().max(200).optional(),
-  experience: z.string().max(200).optional(),
-  education: z.string().max(200).optional(),
-  category: z.string().max(300).optional(),
-  recruiter: z.string().max(300).optional(),
-  skills: z.array(z.string().max(200)).max(50).optional(),
-  externalJobId: z.string().max(200).optional(),
-  shareToken: z.string().max(200).optional(),
-  companyRefId: z.string().max(200).optional(),
-  companyDetails: z.record(z.string().max(2000)).optional(),
-})
-
-function blankToNull(v?: string): string | null {
-  return v && v.trim() !== "" ? v.trim() : null
-}
-
-function stripNulls<T>(value: T): unknown {
-  if (Array.isArray(value)) return value.map((v) => stripNulls(v))
-  if (value && typeof value === "object") {
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (v !== null) out[k] = stripNulls(v)
-    }
-    return out
-  }
-  return value
-}
+const inputSchema = z.object({ previewToken: z.string().min(1).max(100000) });
 
 export const POST = auth(async (req) => {
-  const email = req.auth?.user?.email
+  const email = req.auth?.user?.email;
   if (!email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!recommendationSaveRateLimit(email)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak penyimpanan, coba lagi nanti." },
+      { status: 429 },
+    );
   }
 
-  const json = await req.json().catch(() => null)
-  const parsed = jobInput.safeParse(stripNulls(json))
+  const json = await req.json().catch(() => null);
+  const parsed = inputSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Data lowongan tidak valid", issues: parsed.error.flatten() },
+      { error: "Preview lowongan tidak valid" },
       { status: 400 },
-    )
+    );
   }
-  const data = parsed.data
 
   const user = await prisma.user.findUnique({
     where: { email },
     select: { id: true },
-  })
+  });
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const data = verifyJobPreview(parsed.data.previewToken, user.id);
+  if (!data) {
+    return NextResponse.json(
+      { error: "Preview lowongan kedaluwarsa atau tidak valid" },
+      { status: 400 },
+    );
   }
 
-  const title = blankToNull(data.title)!
-  const company = data.company?.trim() || ""
-  const location = blankToNull(data.location)
-  const salary = blankToNull(data.salary)
-  const description = blankToNull(data.description)
-  const postedAt = data.postedAt ? new Date(data.postedAt) : null
-  const employmentType = blankToNull(data.employmentType)
-  const experience = blankToNull(data.experience)
-  const education = blankToNull(data.education)
-  const category = blankToNull(data.category)
-  const recruiter = blankToNull(data.recruiter)
-  const externalJobId = blankToNull(data.externalJobId)
-  const shareToken = blankToNull(data.shareToken)
-  const companyRefId = blankToNull(data.companyRefId)
-  const skills = data.skills && data.skills.length ? data.skills : []
-  const companyDetails = data.companyDetails
-
-  const job = await prisma.job.upsert({
-    where: { sourceUrl: data.sourceUrl },
-    update: {
-      title,
-      company,
-      location,
-      salary,
-      description,
-      postedAt,
-      source: data.source,
-      employmentType,
-      experience,
-      education,
-      category,
-      recruiter,
-      skills,
-      externalJobId,
-      shareToken,
-      companyRefId,
-      companyDetails,
-    },
-    create: {
-      title,
-      company,
-      location,
-      salary,
-      description,
-      postedAt,
-      source: data.source,
-      sourceUrl: data.sourceUrl,
-      employmentType,
-      experience,
-      education,
-      category,
-      recruiter,
-      skills,
-      externalJobId,
-      shareToken,
-      companyRefId,
-      companyDetails,
-    },
-  })
-
-  await prisma.recommendation.upsert({
-    where: { userId_jobId: { userId: user.id, jobId: job.id } },
-    update: {},
-    create: { userId: user.id, jobId: job.id },
-  })
+  const job = await prisma.$transaction(async (tx) => {
+    const savedJob = await tx.job.upsert({
+      where: { dedupeKey: data.sourceUrl },
+      update: {
+        title: data.title,
+        company: data.company,
+        location: data.location,
+        salary: data.salary,
+        description: data.description,
+        postedAt: data.postedAt ? new Date(data.postedAt) : null,
+        source: data.source,
+        sourceUrl: data.sourceUrl,
+        employmentType: data.employmentType,
+        experience: data.experience,
+        education: data.education,
+        category: data.category,
+        recruiter: data.recruiter,
+        skills: data.skills,
+        externalJobId: data.externalJobId,
+        shareToken: data.shareToken,
+        companyRefId: data.companyRefId,
+        companyDetails: data.companyDetails ?? undefined,
+      },
+      create: {
+        scope: "SHARED",
+        ownerId: null,
+        dedupeKey: data.sourceUrl,
+        title: data.title,
+        company: data.company,
+        location: data.location,
+        salary: data.salary,
+        description: data.description,
+        postedAt: data.postedAt ? new Date(data.postedAt) : null,
+        source: data.source,
+        sourceUrl: data.sourceUrl,
+        employmentType: data.employmentType,
+        experience: data.experience,
+        education: data.education,
+        category: data.category,
+        recruiter: data.recruiter,
+        skills: data.skills,
+        externalJobId: data.externalJobId,
+        shareToken: data.shareToken,
+        companyRefId: data.companyRefId,
+        companyDetails: data.companyDetails ?? undefined,
+      },
+    });
+    await tx.recommendation.upsert({
+      where: { userId_jobId: { userId: user.id, jobId: savedJob.id } },
+      update: {},
+      create: { userId: user.id, jobId: savedJob.id },
+    });
+    await tx.savedJob.upsert({
+      where: { userId_jobId: { userId: user.id, jobId: savedJob.id } },
+      update: {},
+      create: { userId: user.id, jobId: savedJob.id, origin: "SEARCH" },
+    });
+    return savedJob;
+  });
 
   const profile = await prisma.profile.findUnique({
     where: { userId: user.id },
-  })
+  });
 
-  let matchScore: number | null = null
+  let matchScore: number | null = null;
   if (profile) {
-    const result = await scoreMatch(profile, job)
-    matchScore = result.score
-    await prisma.match.upsert({
-      where: { userId_jobId: { userId: user.id, jobId: job.id } },
-      update: {
-        score: result.score,
-        matchedSkills: result.matchedSkills,
-        missingSkills: result.missingSkills,
-        source: result.source,
-      },
-      create: {
-        userId: user.id,
-        jobId: job.id,
-        score: result.score,
-        matchedSkills: result.matchedSkills,
-        missingSkills: result.missingSkills,
-        source: result.source,
-      },
-    })
+    const result = await scoreMatch(profile, job);
+    const cacheKey = createMatchCacheKey(profile, job);
+    matchScore = result.score;
+    await prisma.$transaction([
+      prisma.recommendation.update({
+        where: { userId_jobId: { userId: user.id, jobId: job.id } },
+        data: { score: result.score },
+      }),
+      prisma.match.upsert({
+        where: { userId_jobId: { userId: user.id, jobId: job.id } },
+        update: {
+          score: result.score,
+          matchedSkills: result.matchedSkills,
+          missingSkills: result.missingSkills,
+          source: result.source,
+          cacheKey,
+        },
+        create: {
+          userId: user.id,
+          jobId: job.id,
+          score: result.score,
+          matchedSkills: result.matchedSkills,
+          missingSkills: result.missingSkills,
+          source: result.source,
+          cacheKey,
+        },
+      }),
+    ]);
   }
 
-  return NextResponse.json({ ok: true, jobId: job.id, matchScore })
-})
+  return NextResponse.json({
+    ok: true,
+    jobId: job.id,
+    job,
+    scope: job.scope,
+    matchScore,
+  });
+});

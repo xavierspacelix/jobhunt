@@ -8,8 +8,27 @@ on:
 
 jobs:
   verify:
-    name: Lint, Typecheck, Build
+    name: Lint, Typecheck, Test, Build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jobhunter
+          POSTGRES_PASSWORD: jobhunter
+          POSTGRES_DB: jobhunter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jobhunter -d jobhunter"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://jobhunter:jobhunter@localhost:5432/jobhunter
+      AUTH_SECRET: ci-only-auth-secret-at-least-32-characters
+      AUTH_URL: http://localhost:3000
+      RUN_DB_TESTS: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,13 +43,22 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Prisma generate
-        run: npx prisma generate
+        run: yarn prisma generate
+
+      - name: Validate Prisma schema
+        run: yarn prisma validate
+
+      - name: Apply test migrations
+        run: yarn prisma migrate deploy
 
       - name: Lint
         run: yarn lint
 
       - name: Typecheck
         run: yarn typecheck
+
+      - name: Test
+        run: yarn test
 
       - name: Build
         run: yarn build

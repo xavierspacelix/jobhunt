@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "node -r dotenv/config --import tsx --test tests/*.test.ts",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed"
   },
@@ -57,6 +57,9 @@
     "typescript": "^5"
   },
   "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   }

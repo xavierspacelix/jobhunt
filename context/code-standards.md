@@ -28,7 +28,7 @@
 ## API Routes
 
 - Typed request/response (Zod).
-- Auth check first (`getServerSession`), then ownership check.
+- Auth check first (`auth()` in the current Auth.js setup), then ownership check.
 - Timeout & try/catch for external calls (scraper, LLM, email).
 - Return correct HTTP codes (400 validation, 401 unauth, 403 forbidden, 429 rate-limit).
 
@@ -45,6 +45,10 @@
 - CSRF & rate-limit where needed.
 - Sanitize HTML before render (job description).
 - Email templates plain, no user HTML injection.
+- Shared Job writes require a valid user-bound server preview; client-edited or
+  unsigned input must remain user-private.
+- External HTTP must pin validated public DNS per redirect hop; browser fallback
+  must remain exact-host/same-origin.
 
 ## Tests
 
@@ -53,6 +57,8 @@
 - Parser: fixture HTML snapshot tests.
 - API: auth & validation tests.
 - UI: critical interaction (kanban drag, upload).
+- Release gate includes DB-backed tests when `RUN_DB_TESTS=1`; browser/live-source
+  coverage must be reported honestly rather than inferred from unit tests.
 
 ## Docs
 

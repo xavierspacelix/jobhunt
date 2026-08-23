@@ -10,72 +10,73 @@ import {
   CheckCircle2,
   InfoIcon,
   PencilIcon,
+  XIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type ExperienceEntry = {
-  role?: string
-  company?: string
-  period?: string
-}
+  role?: string;
+  company?: string;
+  period?: string;
+};
 type EducationEntry = {
-  school?: string
-  degree?: string
-  period?: string
-}
+  school?: string;
+  degree?: string;
+  period?: string;
+};
 type CertificationEntry = {
-  name?: string
-  issuer?: string
-  period?: string
-}
+  name?: string;
+  issuer?: string;
+  period?: string;
+};
 
 type Profile = {
-  id: string
-  userId: string
-  rawText: string | null
-  fullName: string | null
-  headline: string | null
-  location: string | null
-  email: string | null
-  phone: string | null
-  skills: string[]
-  summary: string | null
-  experience: ExperienceEntry[] | null
-  education: EducationEntry[] | null
-  certifications: CertificationEntry[] | null
-  links: string[] | null
-  cvKey: string | null
-  parsedWith: string | null
-  createdAt: string
-  updatedAt: string
-}
+  id: string;
+  userId: string;
+  rawText: string | null;
+  fullName: string | null;
+  headline: string | null;
+  location: string | null;
+  email: string | null;
+  phone: string | null;
+  skills: string[];
+  summary: string | null;
+  experience: ExperienceEntry[] | null;
+  education: EducationEntry[] | null;
+  certifications: CertificationEntry[] | null;
+  links: string[] | null;
+  cvKey: string | null;
+  parsedWith: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
-type DraftEntry = Record<string, string>
+type DraftEntry = Record<string, string>;
 
 type Draft = {
-  fullName: string
-  headline: string
-  location: string
-  email: string
-  phone: string
-  summary: string
-  skills: string[]
-  experience: DraftEntry[]
-  education: DraftEntry[]
-  certifications: DraftEntry[]
-  links: string[]
-}
+  fullName: string;
+  headline: string;
+  location: string;
+  email: string;
+  phone: string;
+  summary: string;
+  skills: string[];
+  experience: DraftEntry[];
+  education: DraftEntry[];
+  certifications: DraftEntry[];
+  links: string[];
+};
 
 const inputClass =
-  "mt-1 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring"
+  "mt-1 h-11 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none md:h-9 md:text-sm";
 
 function Chip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
+    <span className="bg-secondary text-secondary-foreground inline-flex items-center rounded-full px-3 py-1 text-sm">
       {children}
     </span>
-  )
+  );
 }
 
 function ResultCard({
@@ -83,26 +84,28 @@ function ResultCard({
   children,
   className,
 }: {
-  title: string
-  children: ReactNode
-  className?: string
+  title: string;
+  children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className={cn("rounded-xl border border-border bg-card p-5", className)}>
-      <h2 className="text-sm font-medium text-foreground">{title}</h2>
+    <section
+      className={cn("border-border bg-card rounded-xl border p-5", className)}
+    >
+      <h2 className="text-foreground text-sm font-medium">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
-  )
+  );
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null
+  if (!value) return null;
   return (
     <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm text-foreground">{value}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="text-foreground text-sm">{value}</p>
     </div>
-  )
+  );
 }
 
 function toDraft(p: Profile): Draft {
@@ -121,7 +124,8 @@ function toDraft(p: Profile): Draft {
     })),
     education: (p.education ?? []).map((e) => ({
       school: e.school ?? "",
-      degree: "degree" in e ? String((e as Record<string, unknown>).degree ?? "") : "",
+      degree: e.degree ?? "",
+      period: e.period ?? "",
     })),
     certifications: (p.certifications ?? []).map((e) => ({
       name: e.name ?? "",
@@ -129,7 +133,7 @@ function toDraft(p: Profile): Draft {
       period: e.period ?? "",
     })),
     links: p.links ?? [],
-  }
+  };
 }
 
 function EntriesEditor({
@@ -139,24 +143,26 @@ function EntriesEditor({
   onChange,
   addLabel,
 }: {
-  entries: DraftEntry[]
-  columns: { key: string; label: string; placeholder?: string }[]
-  onAdd: () => void
-  onChange: (next: DraftEntry[]) => void
-  addLabel: string
+  entries: DraftEntry[];
+  columns: { key: string; label: string; placeholder?: string }[];
+  onAdd: () => void;
+  onChange: (next: DraftEntry[]) => void;
+  addLabel: string;
 }) {
   const update = (i: number, key: string, val: string) =>
-    onChange(entries.map((e, i2) => (i2 === i ? { ...e, [key]: val } : e)))
-  const remove = (i: number) => onChange(entries.filter((_, i2) => i2 !== i))
+    onChange(entries.map((e, i2) => (i2 === i ? { ...e, [key]: val } : e)));
+  const remove = (i: number) => onChange(entries.filter((_, i2) => i2 !== i));
 
   return (
     <div className="space-y-3">
       {entries.map((e, i) => (
-        <div key={i} className="rounded-lg border border-border p-3">
+        <div key={i} className="border-border rounded-lg border p-3">
           <div className="grid gap-2 sm:grid-cols-2">
             {columns.map((col) => (
               <label key={col.key} className="block">
-                <span className="text-xs text-muted-foreground">{col.label}</span>
+                <span className="text-muted-foreground text-xs">
+                  {col.label}
+                </span>
                 <input
                   value={e[col.key] ?? ""}
                   placeholder={col.placeholder}
@@ -169,7 +175,7 @@ function EntriesEditor({
           <button
             type="button"
             onClick={() => remove(i)}
-            className="mt-2 text-xs text-destructive hover:underline"
+            className="text-destructive mt-2 inline-flex min-h-11 items-center rounded-md px-2 text-xs hover:underline md:min-h-9"
           >
             Hapus
           </button>
@@ -179,52 +185,53 @@ function EntriesEditor({
         + {addLabel}
       </Button>
     </div>
-  )
+  );
 }
 
 function SkillEditor({
   value,
   onChange,
 }: {
-  value: string[]
-  onChange: (v: string[]) => void
+  value: string[];
+  onChange: (v: string[]) => void;
 }) {
-  const [input, setInput] = useState("")
+  const [input, setInput] = useState("");
   const add = (raw: string) => {
     const parts = raw
       .split(/[,\n]/)
       .map((s) => s.trim())
-      .filter(Boolean)
-    const next = [...value]
-    for (const p of parts) if (!next.includes(p)) next.push(p)
-    onChange(next)
-    setInput("")
-  }
+      .filter(Boolean);
+    const next = [...value];
+    for (const p of parts) if (!next.includes(p)) next.push(p);
+    onChange(next);
+    setInput("");
+  };
   return (
     <div className="flex flex-wrap items-center gap-2">
       {value.map((s) => (
         <span
           key={s}
-          className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground"
+          className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm"
         >
           {s}
           <button
             type="button"
             onClick={() => onChange(value.filter((x) => x !== s))}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground inline-flex size-11 items-center justify-center rounded-full md:size-9"
             aria-label={`Hapus ${s}`}
           >
-            ×
+            <XIcon className="size-4" aria-hidden="true" />
           </button>
         </span>
       ))}
       <input
         value={input}
+        aria-label="Tambah keahlian"
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === ",") {
-            e.preventDefault()
-            if (input) add(input)
+            e.preventDefault();
+            if (input) add(input);
           }
         }}
         onBlur={() => input && add(input)}
@@ -232,25 +239,26 @@ function SkillEditor({
         className={cn(inputClass, "inline-flex w-auto min-w-[140px] flex-1")}
       />
     </div>
-  )
+  );
 }
 
 function LinksEditor({
   value,
   onChange,
 }: {
-  value: string[]
-  onChange: (v: string[]) => void
+  value: string[];
+  onChange: (v: string[]) => void;
 }) {
   const set = (i: number, val: string) =>
-    onChange(value.map((v, i2) => (i2 === i ? val : v)))
-  const remove = (i: number) => onChange(value.filter((_, i2) => i2 !== i))
+    onChange(value.map((v, i2) => (i2 === i ? val : v)));
+  const remove = (i: number) => onChange(value.filter((_, i2) => i2 !== i));
   return (
     <div className="space-y-2">
       {value.map((link, i) => (
         <div key={i} className="flex items-center gap-2">
           <input
             value={link}
+            aria-label={`Tautan ${i + 1}`}
             onChange={(e) => set(i, e.target.value)}
             placeholder="https://…"
             className={inputClass}
@@ -258,10 +266,10 @@ function LinksEditor({
           <button
             type="button"
             onClick={() => remove(i)}
-            className="text-xs text-sm text-destructive hover:underline"
+            className="text-destructive inline-flex size-11 items-center justify-center rounded-lg hover:underline md:size-9"
             aria-label="Hapus tautan"
           >
-            ×
+            <XIcon className="size-4" aria-hidden="true" />
           </button>
         </div>
       ))}
@@ -274,108 +282,118 @@ function LinksEditor({
         + Tambah tautan
       </Button>
     </div>
-  )
+  );
 }
 
 export function ProfileManager() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [cvUrl, setCvUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [dragging, setDragging] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [saving, setSaving] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    let active = true
-    ;(async () => {
+    let active = true;
+    (async () => {
       try {
-        const res = await fetch("/api/profile")
-        if (!active || !res.ok) return
-        const data = (await res.json()) as {
-          profile: Profile | null
-          cvUrl: string | null
+        const res = await fetch("/api/profile");
+        if (!active) return;
+        if (!res.ok) {
+          setError("Profil gagal dimuat. Coba muat ulang halaman.");
+          return;
         }
-        setProfile(data.profile)
-        setCvUrl(data.cvUrl)
+        const data = (await res.json()) as {
+          profile: Profile | null;
+          cvUrl: string | null;
+        };
+        setProfile(data.profile);
+        setCvUrl(data.cvUrl);
+      } catch {
+        if (active) {
+          setError("Profil gagal dimuat. Periksa koneksi Anda lalu coba lagi.");
+        }
       } finally {
-        if (active) setLoading(false)
+        if (active) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      active = false
-    }
-  }, [])
+      active = false;
+    };
+  }, []);
 
   const handleFile = useCallback(async (file: File) => {
-    setError(null)
-    setSuccess(false)
+    if (loading || uploading) return;
+    setError(null);
+    setSuccess(false);
 
     if (file.type !== "application/pdf") {
-      setError("Only PDF files are allowed")
-      return
+      setError("Hanya file PDF yang dapat diunggah.");
+      return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setError("File too large (max 5MB)")
-      return
+      setError("Ukuran file terlalu besar. Maksimal 5 MB.");
+      return;
     }
 
-    setUploading(true)
+    setUploading(true);
     try {
-      const form = new FormData()
-      form.append("file", file)
+      const form = new FormData();
+      form.append("file", file);
       const res = await fetch("/api/cv/upload", {
         method: "POST",
         body: form,
-      })
+      });
       const data = (await res.json()) as {
-        profile?: Profile
-        cvUrl?: string | null
-        error?: string
-      }
+        profile?: Profile;
+        cvUrl?: string | null;
+        error?: string;
+      };
       if (!res.ok || !data.profile) {
-        setError(data.error ?? "Upload failed")
-        return
+        setError(data.error ?? "CV gagal diunggah.");
+        return;
       }
-      setProfile(data.profile)
-      setCvUrl(data.cvUrl ?? null)
-      setSuccess(true)
+      setProfile(data.profile);
+      setCvUrl(data.cvUrl ?? null);
+      setSuccess(true);
     } catch {
-      setError("Something went wrong while uploading")
+      setError("Terjadi kesalahan saat mengunggah CV.");
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }, [])
+  }, [loading, uploading]);
 
   const onDrop = useCallback(
     (e: DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      setDragging(false)
-      const file = e.dataTransfer.files?.[0]
-      if (file) void handleFile(file)
+      e.preventDefault();
+      if (loading || uploading) return;
+      setDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) void handleFile(file);
     },
-    [handleFile],
-  )
+    [handleFile, loading, uploading],
+  );
 
   const startEdit = () => {
-    if (!profile) return
-    setDraft(toDraft(profile))
-    setEditing(true)
-  }
+    if (!profile) return;
+    setDraft(toDraft(profile));
+    setEditing(true);
+  };
 
   const cancelEdit = () => {
-    setEditing(false)
-    setDraft(null)
-  }
+    setEditing(false);
+    setDraft(null);
+  };
 
   const saveEdit = async () => {
-    if (!draft) return
-    setSaving(true)
-    setError(null)
+    if (!draft) return;
+    setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/profile", {
         method: "PUT",
@@ -393,39 +411,41 @@ export function ProfileManager() {
           certifications: draft.certifications,
           links: draft.links,
         }),
-      })
+      });
       const data = (await res.json()) as {
-        profile?: Profile
-        error?: string
-      }
+        profile?: Profile;
+        error?: string;
+      };
       if (!res.ok || !data.profile) {
-        setError(data.error ?? "Gagal menyimpan")
-        return
+        setError(data.error ?? "Gagal menyimpan");
+        return;
       }
-      setProfile(data.profile)
-      setEditing(false)
-      setDraft(null)
+      setProfile(data.profile);
+      setEditing(false);
+      setDraft(null);
     } catch {
-      setError("Something went wrong while saving")
+      setError("Terjadi kesalahan saat menyimpan profil.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
-  const isHeuristic = profile?.parsedWith === "heuristic"
+  const isHeuristic = profile?.parsedWith === "heuristic";
 
   const updateDraft = (patch: Partial<Draft>) =>
-    setDraft((d) => (d ? { ...d, ...patch } : d))
+    setDraft((d) => (d ? { ...d, ...patch } : d));
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="rounded-xl border border-border bg-card p-5 md:p-6">
+      <section className="border-border bg-card rounded-xl border p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Profil &amp; CV</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Unggah CV (PDF) untuk mengekstrak data profil secara otomatis, lalu
-              edit hasilnya.
+            <h1 className="text-foreground text-2xl font-semibold">
+              Profil &amp; CV
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Unggah CV (PDF) untuk mengekstrak data profil secara otomatis,
+              lalu edit hasilnya.
             </p>
           </div>
           {profile && !editing && (
@@ -437,7 +457,7 @@ export function ProfileManager() {
             <div className="flex gap-2">
               <Button variant="cta" onClick={saveEdit} disabled={saving}>
                 {saving ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
                 ) : (
                   "Simpan"
                 )}
@@ -450,15 +470,30 @@ export function ProfileManager() {
         </div>
 
         <div
+          role="button"
+          tabIndex={loading || uploading ? -1 : 0}
+          aria-label="Pilih atau tarik file CV PDF"
+          aria-disabled={loading || uploading}
+          aria-busy={uploading}
           onDragOver={(e) => {
-            e.preventDefault()
-            setDragging(true)
+            e.preventDefault();
+            if (loading || uploading) return;
+            setDragging(true);
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (!loading && !uploading) inputRef.current?.click();
+          }}
+          onKeyDown={(event) => {
+            if (!loading && !uploading && (event.key === "Enter" || event.key === " ")) {
+              event.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
           className={cn(
-            "mt-5 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 text-center transition-colors",
+            "focus-visible:ring-ring/50 mt-5 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 text-center transition-colors focus-visible:ring-3 focus-visible:outline-none motion-reduce:transition-none",
+            loading || uploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
             dragging
               ? "border-accent bg-accent/5"
               : "border-border bg-background/40 hover:border-accent/60",
@@ -468,49 +503,62 @@ export function ProfileManager() {
             ref={inputRef}
             type="file"
             accept="application/pdf"
+            disabled={loading || uploading}
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) void handleFile(file)
-              e.target.value = ""
+              const file = e.target.files?.[0];
+              if (file) void handleFile(file);
+              e.target.value = "";
             }}
           />
           {uploading ? (
-            <Loader2 className="size-8 animate-spin text-accent" />
+            <Loader2 className="text-accent size-8 animate-spin motion-reduce:animate-none" />
           ) : (
-            <UploadCloud className="size-8 text-accent" />
+            <UploadCloud className="text-accent size-8" />
           )}
-          <p className="mt-3 font-medium text-foreground">
-            {uploading ? "Memproses CV…" : "Tarik PDF ke sini atau klik untuk pilih"}
+          <p className="text-foreground mt-3 font-medium">
+            {uploading
+              ? "Memproses CV…"
+              : "Tarik PDF ke sini atau klik untuk pilih"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Maksimal 5MB, PDF saja</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Maksimal 5MB, PDF saja
+          </p>
         </div>
 
         {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <AlertCircle className="size-4 shrink-0" />
+          <div
+            className="border-destructive/40 bg-destructive/10 text-destructive mt-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+            role="alert"
+          >
+            <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">
-            <CheckCircle2 className="size-4 shrink-0" />
+          <div
+            className="border-accent/40 bg-accent/10 text-accent mt-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
             CV berhasil diproses.
           </div>
         )}
 
         {isHeuristic && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground">
-            <InfoIcon className="mt-0.5 size-4 shrink-0 text-accent" />
+          <div className="border-accent/40 bg-accent/10 text-foreground mt-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm">
+            <InfoIcon className="text-accent mt-0.5 size-4 shrink-0" />
             <span>
-              Hasil ekstraksi menggunakan heuristik (tanpa AI) sehingga kualitasnya
-              terbatas. Atur{" "}
-              <code className="rounded bg-background/60 px-1 py-0.5 text-xs">
+              Hasil ekstraksi menggunakan heuristik (tanpa AI) sehingga
+              kualitasnya terbatas. Atur{" "}
+              <code className="bg-background/60 rounded px-1 py-0.5 text-xs">
                 LLM_API_KEY
               </code>{" "}
               &amp;{" "}
-              <code className="rounded bg-background/60 px-1 py-0.5 text-xs">
+              <code className="bg-background/60 rounded px-1 py-0.5 text-xs">
                 LLM_BASE_URL
               </code>{" "}
               untuk hasil lebih akurat.
@@ -520,7 +568,10 @@ export function ProfileManager() {
 
         {cvUrl && !editing && (
           <div className="mt-4">
-            <Button variant="cta" render={<a href={cvUrl} target="_blank" rel="noreferrer" />}>
+            <Button
+              variant="cta"
+              render={<a href={cvUrl} target="_blank" rel="noreferrer" />}
+            >
               <FileText className="size-4" /> Lihat CV asli
             </Button>
           </div>
@@ -528,8 +579,16 @@ export function ProfileManager() {
       </section>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Memuat profil…
+        <div
+          className="text-muted-foreground flex items-center gap-2"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2
+            className="size-4 animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />{" "}
+          Memuat profil…
         </div>
       ) : profile ? (
         editing && draft ? (
@@ -537,7 +596,9 @@ export function ProfileManager() {
             <ResultCard title="Profil">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-xs text-muted-foreground">Nama Lengkap</span>
+                  <span className="text-muted-foreground text-xs">
+                    Nama Lengkap
+                  </span>
                   <input
                     value={draft.fullName}
                     onChange={(e) => updateDraft({ fullName: e.target.value })}
@@ -545,7 +606,9 @@ export function ProfileManager() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-muted-foreground">Headline / Title</span>
+                  <span className="text-muted-foreground text-xs">
+                    Headline / Title
+                  </span>
                   <input
                     value={draft.headline}
                     onChange={(e) => updateDraft({ headline: e.target.value })}
@@ -553,7 +616,7 @@ export function ProfileManager() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-muted-foreground">Lokasi</span>
+                  <span className="text-muted-foreground text-xs">Lokasi</span>
                   <input
                     value={draft.location}
                     onChange={(e) => updateDraft({ location: e.target.value })}
@@ -561,7 +624,7 @@ export function ProfileManager() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-muted-foreground">Email</span>
+                  <span className="text-muted-foreground text-xs">Email</span>
                   <input
                     value={draft.email}
                     onChange={(e) => updateDraft({ email: e.target.value })}
@@ -569,7 +632,7 @@ export function ProfileManager() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-muted-foreground">Telepon</span>
+                  <span className="text-muted-foreground text-xs">Telepon</span>
                   <input
                     value={draft.phone}
                     onChange={(e) => updateDraft({ phone: e.target.value })}
@@ -584,7 +647,7 @@ export function ProfileManager() {
                 value={draft.summary}
                 onChange={(e) => updateDraft({ summary: e.target.value })}
                 rows={4}
-                className={cn(inputClass, "resize-y")}
+                className={cn(inputClass, "h-auto min-h-28 resize-y md:h-auto")}
               />
             </ResultCard>
 
@@ -620,7 +683,9 @@ export function ProfileManager() {
                   { key: "period", label: "Periode" },
                 ]}
                 addLabel="Tambah pendidikan"
-                onAdd={() => updateDraft({ education: [...draft.education, {}] })}
+                onAdd={() =>
+                  updateDraft({ education: [...draft.education, {}] })
+                }
                 onChange={(v) => updateDraft({ education: v })}
               />
             </ResultCard>
@@ -687,7 +752,7 @@ export function ProfileManager() {
                         href={link}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-sm text-accent hover:underline"
+                        className="text-accent inline-flex min-h-11 items-center text-sm hover:underline md:min-h-9"
                       >
                         {link}
                       </a>
@@ -734,7 +799,7 @@ export function ProfileManager() {
         )
       )}
     </div>
-  )
+  );
 }
 
 function EntryList<T extends { period?: string }>({
@@ -742,31 +807,33 @@ function EntryList<T extends { period?: string }>({
   primary,
   secondary,
 }: {
-  entries: T[] | null
-  primary: keyof T
-  secondary: keyof T
+  entries: T[] | null;
+  primary: keyof T;
+  secondary: keyof T;
 }) {
   if (!entries || entries.length === 0) {
-    return <span className="text-muted-foreground">Belum terdeteksi.</span>
+    return <span className="text-muted-foreground">Belum terdeteksi.</span>;
   }
   return (
     <ul className="space-y-3">
       {entries.map((e, i) => {
-        const p = e[primary] as string | undefined
-        const s = e[secondary] as string | undefined
-        const period = e.period
-        if (!p && !s && !period) return null
+        const p = e[primary] as string | undefined;
+        const s = e[secondary] as string | undefined;
+        const period = e.period;
+        if (!p && !s && !period) return null;
         return (
           <li key={i} className="text-foreground">
             {p && <span className="font-medium">{p}</span>}
             {p && s && <span className="text-muted-foreground"> di </span>}
             {s && <span className="font-medium">{s}</span>}
             {period && (
-              <span className="block text-sm text-muted-foreground">{period}</span>
+              <span className="text-muted-foreground block text-sm">
+                {period}
+              </span>
             )}
           </li>
-        )
+        );
       })}
     </ul>
-  )
+  );
 }

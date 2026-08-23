@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCvUrl } from "@/lib/storage";
+import { parseProfileUpdate } from "@/lib/profile-input";
 
 export const runtime = "nodejs";
 
@@ -28,28 +29,6 @@ export const GET = auth(async (req) => {
   return Response.json({ profile, cvUrl });
 });
 
-type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
-
-function asString(value: unknown): string | null | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-function asStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const out = value
-    .filter((v): v is string => typeof v === "string")
-    .map((v) => v.trim())
-    .filter(Boolean);
-  return out.length ? out : undefined;
-}
-
-function asJsonArray(value: unknown): Json[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return value as Json[];
-}
-
 export const PUT = auth(async (req) => {
   const email = req.auth?.user?.email;
   if (!email) {
@@ -66,9 +45,9 @@ export const PUT = auth(async (req) => {
     });
   }
 
-  let body: Record<string, unknown>;
+  let body: unknown;
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), {
       status: 400,
@@ -76,28 +55,20 @@ export const PUT = auth(async (req) => {
     });
   }
 
-  const data: Record<string, unknown> = {};
-  const strFields = [
-    "fullName",
-    "headline",
-    "location",
-    "phone",
-    "summary",
-  ] as const;
-  for (const f of strFields) {
-    const v = asString(body[f]);
-    if (v !== undefined) data[f] = v;
+  const parsed = parseProfileUpdate(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({
+        error: "Data profil tidak valid",
+        issues: parsed.error.flatten(),
+      }),
+      {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      },
+    );
   }
-  const arrFields = ["skills", "links"] as const;
-  for (const f of arrFields) {
-    const v = asStringArray(body[f]);
-    if (v !== undefined) data[f] = v;
-  }
-  const jsonFields = ["experience", "education", "certifications"] as const;
-  for (const f of jsonFields) {
-    const v = asJsonArray(body[f]);
-    if (v !== undefined) data[f] = v;
-  }
+  const data = parsed.data;
 
   const profile = await prisma.profile.upsert({
     where: { userId: user.id },

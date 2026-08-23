@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
-import { cn } from "@/lib/utils"
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export function StatCard({
   icon,
@@ -8,31 +8,33 @@ export function StatCard({
   hint,
   className,
 }: {
-  icon: ReactNode
-  label: string
-  value: string
-  hint?: string
-  className?: string
+  icon: ReactNode;
+  label: string;
+  value: string;
+  hint?: string;
+  className?: string;
 }) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-md",
+        "border-border bg-card rounded-2xl border p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow-md motion-reduce:transition-none",
         className,
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           {label}
         </span>
-        <span className="flex size-8 items-center justify-center rounded-xl bg-accent/10 text-accent">
+        <span className="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-xl">
           {icon}
         </span>
       </div>
-      <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">
+      <p className="text-foreground mt-3 text-3xl font-bold tracking-tight">
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? (
+        <p className="text-muted-foreground mt-1 text-xs">{hint}</p>
+      ) : null}
     </div>
-  )
+  );
 }

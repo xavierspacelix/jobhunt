@@ -1,7 +1,6 @@
-# App + dev. No cron — job search is on-demand from the Lowongan page.
+# Production app only. No cron - job search is on-demand from the Lowongan page.
 # Build & run (prod via Traefik):  docker compose up --build -d
-# Run migrations on your DB first:  docker compose run --rm web yarn prisma migrate deploy
-# Local prod mode (build + start): docker compose up --build -d
+# Migrations run before Next.js starts. Manual status: docker compose run --rm web yarn prisma migrate status
 # One-shot manual search is done from the UI ("Cari Lowongan"), no separate cron service.
 
 services:
@@ -18,10 +17,16 @@ services:
       - "traefik.http.routers.jobhunt-app.rule=Host(`jobhunt.spacelix.qzz.io`)"
       - "traefik.http.routers.jobhunt-app.entrypoints=websecure"
       - "traefik.http.routers.jobhunt-app.tls=true"
+      - "traefik.http.routers.jobhunt-app.middlewares=jobhunt-body-limit"
       - "traefik.http.services.jobhunt-app.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.jobhunt-body-limit.buffering.maxRequestBodyBytes=6291456"
     restart: unless-stopped
+    volumes:
+      - uploads:/app/uploads
     networks:
       - traefik-public
 networks:
   traefik-public:
     external: true
+volumes:
+  uploads:

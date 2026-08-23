@@ -1,35 +1,24 @@
-# UI Tokens — JobHunter
+# UI Tokens - JobHunter
 
-> **Source of Truth:** `design-system/jobhunter/MASTER.md` (Soft Warm Minimal — variance 4 / motion 3 / density 6).
-> Tokens di bawah adalah adaptasi OKLCH + shadcn untuk implementasi Next.js. Jangan pakai raw hex/palette di components.
+> Source of truth: `design-system/jobhunter/MASTER.md` (Soft Warm Minimal,
+> variance 4, motion 3, density 6). Runtime values live in `app/globals.css`.
 
-## Design System Master
+## Design System
 
 - Master: `design-system/jobhunter/MASTER.md`
-- Page overrides: `design-system/jobhunter/pages/<page>.md` (jika ada, override Master)
-- WAJIB load skill `ui-ux-pro-max` sebelum desain UI baru: `python scripts/search.py "<query>" --design-system --persist -p "JobHunter"`
-
-Perbedaan dari `../nerd/prototype` (DILARANG copy):
-- Nerd: neutral OKLCH + green lime `--primary oklch(0.841 0.238 128.85)`, dense utility, mono-heavy.
-- JobHunter: **Soft Warm Minimal** — cream canvas `#FAF8F4` + muted indigo accent `#4F46E5`, warm panel `#F1EBE0`, rounded-2xl, soft shadow. Font: Inter. Friendly & calm, bukan flat-blue tajam.
-- **Dark mode:** warm-dark via `next-themes` (`.dark` tokens in `globals.css`): bg `#1C1917`, card `#292524`, accent `#6366F1`, text `#FAF8F4`. Komponen token-only, tidak ada kode dark per-page.
+- Page override: `design-system/jobhunter/pages/<page>.md`
+- Load `ui-ux-pro-max` before UI design, implementation, or review.
+- Do not copy palette, typography, or layout from `../nerd/prototype`.
 
 ## Typography
 
-- Heading: **Inter** (dari MASTER — minimal, clean, swiss, neutral, professional)
-- Body: **Inter**
-- Mono: **JetBrains Mono** (untuk skor, gaji, log)
-- Alternatif: `system-ui` jika Google Fonts gagal — jangan download font lain tanpa update MASTER.
+- Sans/heading: Inter via `next/font`
+- Mono: JetBrains Mono via `next/font`
+- Body default: 14px with comfortable line height
+- Use mono for scores, salaries, and machine-like progress only
 
-```css
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
---font-sans: "Inter", system-ui, sans-serif;
---font-mono: "JetBrains Mono", ui-monospace, monospace;
-```
-
-Type scale (density 6 — standard):
 | Role | Size | Weight | Line |
-|---|---|---:|---|
+|---|---:|---:|---:|
 | Display | 30px | 700 | 38px |
 | Title | 20px | 600 | 28px |
 | Subtitle | 16px | 500 | 24px |
@@ -38,78 +27,79 @@ Type scale (density 6 — standard):
 | Mono | 12px | 500 | 18px |
 | Caption | 12px | 400 | 16px |
 
-## Color — OKLCH (shadcn) derived dari MASTER HEX
+## Runtime Color Tokens
 
-```css
-:root {
-  --background: oklch(0.98 0.01 230); /* #F0F9FF */
-  --foreground: oklch(0.26 0.06 240); /* #0C4A6E */
-  --card: oklch(1 0 0); /* #FFFFFF */
-  --card-foreground: oklch(0.26 0.06 240);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.26 0.06 240);
-  --primary: oklch(0.52 0.12 240); /* #0369A1 */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.70 0.12 230); /* #0EA5E9 */
-  --secondary-foreground: oklch(0.15 0.03 260);
-  --muted: oklch(0.95 0.01 230); /* #E7EFF5 */
-  --muted-foreground: oklch(0.55 0.03 230); /* #475569 */
-  --accent: oklch(0.62 0.15 145); /* #16A34A success CTA */
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.55 0.22 27); /* #DC2626 */
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.88 0.03 230); /* #BAE6FD */
-  --input: oklch(0.88 0.03 230);
-  --ring: oklch(0.52 0.12 240);
-  /* Extensions */
-  --color-success: oklch(0.62 0.15 145);
-  --color-success-soft: oklch(0.95 0.03 145);
-  --color-warning: oklch(0.78 0.16 80);
-  --color-info: oklch(0.60 0.18 250);
-  --radius: 0.75rem;
-}
+Components must use semantic utilities such as `bg-background`, `bg-card`,
+`text-foreground`, `text-muted-foreground`, `bg-accent`, and `border-border`.
+Hex below documents `app/globals.css`; it is not permission to embed hex in
+components.
 
-.dark {
-  --background: oklch(0.18 0.03 240);
-  --foreground: oklch(0.95 0.01 230);
-  --card: oklch(0.22 0.03 240);
-  --border: oklch(1 0 0 / 12%);
-  --primary: oklch(0.65 0.12 240);
-}
-```
-
-## Spacing (density 7)
-
-| Token | Value | Usage |
+| Token | Light | Dark |
 |---|---|---|
-| --space-xs | 4px | tight gap |
-| --space-sm | 8px | icon gap |
-| --space-md | 16px | card padding |
-| --space-lg | 24px | section |
-| --space-xl | 32px | large gap |
-| --space-2xl | 48px | section margin |
+| `--background` | `#FAF8F4` | `#1C1917` |
+| `--foreground` | `#1C1917` | `#FAF8F4` |
+| `--card` / `--popover` | `#FFFFFF` | `#292524` |
+| `--primary` | `#1C1917` | `#FAF8F4` |
+| `--primary-foreground` | `#FFFFFF` | `#1C1917` |
+| `--secondary` | `#F1EBE0` | `#2A2620` |
+| `--muted` | `#F5F1EA` | `#292524` |
+| `--muted-foreground` | `#78716C` | `#A8A29E` |
+| `--accent` / `--ring` | `#4F46E5` | `#6366F1` |
+| `--accent-foreground` | `#FFFFFF` | `#FFFFFF` |
+| `--destructive` | `#DC2626` | `#EF4444` |
+| `--border` / `--input` | `#E7E5E4` | `#3F3A34` |
 
-## Shape & Shadow
+Status extensions:
 
-```css
---radius-sm: calc(var(--radius) - 4px);
---radius-md: calc(var(--radius) - 2px);
---radius-lg: var(--radius);
---shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
---shadow-md: 0 4px 6px rgba(0,0,0,0.07);
---shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
-```
+| Token | Purpose |
+|---|---|
+| `--color-success` | positive/applied/interview state |
+| `--color-warning` | screening/follow-up warning |
+| `--color-info` | wishlist/informational state |
+| `--color-muted-status` | neutral/offer state |
+| `--destructive` | rejected/destructive state |
 
-Cards di primary content: `border + bg-card` (flat), shadow hanya untuk popover/dialog. Hover: `translateY(-1px) + shadow-md` (150-200ms ease).
+Sidebar has dedicated semantic tokens (`--sidebar*`) in `app/globals.css`.
+
+## Spacing and Density
+
+MASTER density is 6/10. Prefer the Tailwind spacing scale that corresponds to:
+
+| Role | Value |
+|---|---:|
+| Tight | 2-4px |
+| Icon/control gap | 8px |
+| Compact surface padding | 12-16px |
+| Standard card padding | 20-24px |
+| Section gap | 24-32px |
+
+Avoid introducing a second custom spacing-token scale unless MASTER is updated.
+
+## Shape and Shadow
+
+- Runtime base radius: `--radius: 0.875rem`; feature cards commonly use
+  `rounded-2xl`.
+- Cards: semantic surface, border, optional subtle `shadow-sm` or `shadow-md` as
+  allowed by MASTER.
+- Dialogs/dropdowns may use stronger `shadow-lg`.
+- Hover must not scale or shift layout. Existing one-pixel card translation is
+  recorded in the UI registry as a consistency issue, not a new baseline.
 
 ## Motion
 
-- Default: 150-200ms ease-out (dari MASTER: no heavy animation).
-- List stagger (optional): GSAP `back.out(1.4)` 300-450ms, hanya untuk bento grid dashboard, skip jika `prefers-reduced-motion`.
-- Respect `prefers-reduced-motion`.
+- 150-250ms, opacity/color where possible.
+- Respect `prefers-reduced-motion: reduce`; skip non-essential translation,
+  pulse, and entrance/exit animation.
+- `app/globals.css` limits global color transitions to
+  `prefers-reduced-motion: no-preference`; individual animations still require
+  auditing.
 
 ## Invariants
 
-- Never raw hex / raw Tailwind palette di components — pakai `bg-primary`, `text-muted-foreground`, `border-border`, dll.
-- Selalu pair color + text/icon untuk status (tracker: WISHLIST/APPLIED -> badge).
-- shadcn primitives di `components/ui/` mapping ke tokens di atas.
+- No raw hex or raw Tailwind palette utilities in application components.
+- Pair status color with text/icon; never rely on color alone.
+- All shadcn/Base UI primitives map to semantic tokens.
+- Dark mode uses `.dark` token overrides through next-themes, not page-specific
+  color branches.
+- The current remediation gate reports no raw-palette component violations;
+  future changes must preserve this invariant.

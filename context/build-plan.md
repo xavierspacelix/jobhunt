@@ -8,7 +8,7 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 
 1. Context docs & feature specs done (this plan).
 2. Init Next.js 16 + TS strict + Tailwind + shadcn + ESLint + Prettier.
-3. Setup Prisma + Supabase/Docker + .env.example
+3. Setup Prisma + external PostgreSQL + `.env.example`
 
 ## Phase 1: Foundation
 
@@ -42,18 +42,36 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 ## Phase 4: Engagement
 
 ### Feature 06: Email & Cover Letter
-- Resend integration, send email from application, EmailLog
-- AI cover-letter generator (CV + JD → draft), editable before send
+- Delivered scope: AI/heuristic cover-letter generator, editable and persisted
+- Deferred scope: Resend send endpoint and EmailLog writes (OD-003)
 
 ### Feature 07: Dashboard & Analytics
-- Stats: total applied, interview rate, response rate
-- Reminder: follow-up H+7, interview tomorrow
+- Stats: total applications, sent, interview rate, offers, status distribution
+- Reminder: user-owned follow-up dates due within H+7
 
-## Phase 5: Automation (Post-MVP but planned)
+## Phase 5: On-Demand Discovery
 
-### Feature 08: Cron Scraper & Recommendations
-- Playwright cron every 6h, keyword dari Profile.skills
-- "Rekomendasi Untukmu" tab, save to Wishlist
+### Feature 08: On-demand Job Search & Recommendations
+- Search Glints/Jobstreet only when triggered from `/jobs`
+- Stream progress and scored previews over SSE
+- User explicitly selects results to save as Recommendation
+- No scheduler or cron service
+
+## Promoted Extension
+
+### Feature 12: Chrome Extension Safe Handoff
+- Manifest V3 popup validates an active Glints/Jobstreet tab
+- URL-only handoff into authenticated preview and explicit Save
+- Authenticated ZIP download with tracked timestamp
+
+## Current Delivery
+
+- Features 01-07 and 12 are implemented and pass repository release gates.
+- Feature 08 implementation and automated tests pass; status remains in progress
+  pending live Glints/Jobstreet and deployed-environment verification.
+- The remediation tranche covering authorization, storage, SSRF, validation,
+  rate limiting, accessibility, CI, migrations, and container runtime is done.
+- Email remains deferred under OD-003.
 
 ## Global Release Gates
 
@@ -61,7 +79,9 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 - `yarn lint` + `yarn typecheck` + `yarn test` + `yarn build` pass
 - Secrets not logged, env validated
 - All fetch handle timeout & HTML change gracefully
+- CI executes every release-gate command, including `yarn test`
 
 ## Post-MVP
 
-Tracked in `roadmap.md` and `features/post-mvp/`. Promote only via explicit decision.
+Tracked in `roadmap.md`. Create a feature spec only when a candidate is promoted
+through an explicit decision.

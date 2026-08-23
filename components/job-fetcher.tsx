@@ -1,14 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   SearchIcon,
   SaveIcon,
@@ -23,12 +24,87 @@ import {
   CheckCircle2Icon,
   XCircleIcon,
   CircleIcon,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import type { SearchEvent } from "@/lib/job-search"
-import { MatchDialog } from "@/components/match-dialog"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { SearchEvent } from "@/lib/job-search";
+import { MatchDialog } from "@/components/match-dialog";
 
-type Source = "GLINTS" | "JOBSTREET"
+type Source = "GLINTS" | "JOBSTREET";
+
+const HANDOFF_HOSTS = ["glints.com", "jobstreet.co.id", "jobstreet.com"];
+
+function sourceFromUrl(value: string): Source | null {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    if (host === "glints.com" || host.endsWith(".glints.com")) return "GLINTS";
+    if (
+      host === "jobstreet.co.id" ||
+      host.endsWith(".jobstreet.co.id") ||
+      host === "jobstreet.com" ||
+      host.endsWith(".jobstreet.com")
+    ) {
+      return "JOBSTREET";
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function emptyDraft(
+  source: Source,
+  sourceUrl: string,
+  fetchError: string,
+): Draft {
+  return {
+    title: "",
+    company: "",
+    location: "",
+    salary: "",
+    source,
+    sourceUrl,
+    description: "",
+    postedAt: "",
+    fetchError,
+    employmentType: "",
+    experience: "",
+    education: "",
+    category: "",
+    recruiter: "",
+    skills: [],
+    externalJobId: "",
+    shareToken: "",
+    companyRefId: "",
+    companyDetails: null,
+  };
+}
+
+export function getExtensionHandoff(search: string): string | null {
+  const params = new URLSearchParams(search);
+  if (params.get("source") !== "extension") return null;
+
+  const value = params.get("url");
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value);
+    const supported = HANDOFF_HOSTS.some(
+      (host) =>
+        parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
+    );
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.username ||
+      parsed.password ||
+      !supported
+    ) {
+      return null;
+    }
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
 
 const LOCATION_CHIPS: { label: string; value: string }[] = [
   { label: "Semua Indonesia", value: "" },
@@ -37,97 +113,102 @@ const LOCATION_CHIPS: { label: string; value: string }[] = [
   { label: "Surabaya", value: "Surabaya" },
   { label: "Tangerang", value: "Tangerang" },
   { label: "Remote", value: "Remote" },
-]
+];
 
 interface CompanyDetails {
-  name?: string | null
-  industry?: string | null
-  size?: string | null
-  website?: string | null
-  linkedin?: string | null
-  instagram?: string | null
-  twitter?: string | null
-  facebook?: string | null
-  address?: string | null
-  about?: string | null
+  name?: string | null;
+  industry?: string | null;
+  size?: string | null;
+  website?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+  twitter?: string | null;
+  facebook?: string | null;
+  address?: string | null;
+  about?: string | null;
 }
 
 interface Draft {
-  title: string
-  company: string
-  location: string
-  salary: string
-  source: Source
-  sourceUrl: string
-  description: string
-  postedAt: string
-  fetchError: string | null
-  employmentType: string
-  experience: string
-  education: string
-  category: string
-  recruiter: string
-  skills: string[]
-  externalJobId: string
-  shareToken: string
-  companyRefId: string
-  companyDetails: CompanyDetails | null
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
+  source: Source;
+  sourceUrl: string;
+  description: string;
+  postedAt: string;
+  fetchError: string | null;
+  employmentType: string;
+  experience: string;
+  education: string;
+  category: string;
+  recruiter: string;
+  skills: string[];
+  externalJobId: string;
+  shareToken: string;
+  companyRefId: string;
+  companyDetails: CompanyDetails | null;
+  previewToken?: string;
 }
 
 interface SavedJob {
-  id: string
-  title: string
-  company: string | null
-  location: string | null
-  salary: string | null
-  source: Source
-  sourceUrl: string
-  postedAt: string | null
-  createdAt: string
-  description?: string | null
-  employmentType?: string | null
-  experience?: string | null
-  education?: string | null
-  category?: string | null
-  recruiter?: string | null
-  skills?: string[]
-  externalJobId?: string | null
-  shareToken?: string | null
-  companyRefId?: string | null
-  companyDetails?: CompanyDetails | null
-  matchScore?: number | null
-  origin?: "auto" | "manual"
+  id: string;
+  title: string;
+  company: string | null;
+  location: string | null;
+  salary: string | null;
+  source: Source;
+  sourceUrl: string;
+  postedAt: string | null;
+  createdAt: string;
+  description?: string | null;
+  employmentType?: string | null;
+  experience?: string | null;
+  education?: string | null;
+  category?: string | null;
+  recruiter?: string | null;
+  skills?: string[];
+  externalJobId?: string | null;
+  shareToken?: string | null;
+  companyRefId?: string | null;
+  companyDetails?: CompanyDetails | null;
+  matchScore?: number | null;
+  matchedSkills?: string[];
+  missingSkills?: string[];
+  origin?: "auto" | "manual" | "both";
+  tracked?: boolean;
 }
 
 interface ScrapeJobPayload {
-  title: string
-  company: string
-  location: string | null
-  salary: string | null
-  source: Source
-  sourceUrl: string
-  description: string | null
-  postedAt: string | null
-  employmentType: string | null
-  experience: string | null
-  education: string | null
-  category: string | null
-  recruiter: string | null
-  skills: string[]
-  externalJobId: string | null
-  shareToken: string | null
-  companyRefId: string | null
-  companyDetails: CompanyDetails | null
+  title: string;
+  company: string;
+  location: string | null;
+  salary: string | null;
+  source: Source;
+  sourceUrl: string;
+  description: string | null;
+  postedAt: string | null;
+  employmentType: string | null;
+  experience: string | null;
+  education: string | null;
+  category: string | null;
+  recruiter: string | null;
+  skills: string[];
+  externalJobId: string | null;
+  shareToken: string | null;
+  companyRefId: string | null;
+  companyDetails: CompanyDetails | null;
+  previewToken: string;
 }
 
 interface ScrapeResult {
-  job: ScrapeJobPayload
+  job: ScrapeJobPayload;
   match: {
-    score: number
-    matchedSkills: string[]
-    missingSkills: string[]
-    source: "ai" | "heuristic"
-  }
+    score: number;
+    matchedSkills: string[];
+    missingSkills: string[];
+    source: "ai" | "heuristic";
+  };
 }
 
 function SourceBadge({ source }: { source: Source }) {
@@ -136,35 +217,93 @@ function SourceBadge({ source }: { source: Source }) {
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
         source === "GLINTS"
-          ? "bg-indigo-100 text-indigo-700"
-          : "bg-emerald-100 text-emerald-700",
+          ? "bg-accent/10 text-accent"
+          : "bg-secondary text-secondary-foreground",
       )}
     >
       {source === "GLINTS" ? "Glints" : "Jobstreet"}
     </span>
-  )
+  );
 }
 
-function OriginPill({ origin }: { origin?: "auto" | "manual" }) {
-  if (!origin) return null
+function OriginPill({ origin }: { origin?: "auto" | "manual" | "both" }) {
+  if (!origin) return null;
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-        origin === "auto"
-          ? "bg-indigo-100 text-indigo-700"
+        origin === "auto" || origin === "both"
+          ? "bg-accent/10 text-accent"
           : "bg-secondary text-secondary-foreground",
       )}
     >
-      {origin === "auto" ? "Auto" : "Manual"}
+      {origin === "both"
+        ? "Manual + pencarian"
+        : origin === "auto"
+          ? "Pencarian"
+          : "Manual"}
     </span>
-  )
+  );
 }
 
 function scoreColor(score: number): string {
-  if (score >= 70) return "var(--color-success)"
-  if (score >= 40) return "var(--color-warning)"
-  return "var(--color-destructive)"
+  if (score >= 70) return "var(--color-success)";
+  if (score >= 40) return "var(--color-warning)";
+  return "var(--destructive)";
+}
+
+function MatchScoreBlock({
+  score,
+  matchedSkills,
+  missingSkills,
+}: {
+  score: number;
+  matchedSkills?: string[];
+  missingSkills?: string[];
+}) {
+  return (
+    <div className="mt-2 space-y-2">
+      <p className="text-foreground text-sm font-medium">
+        Skor kecocokan:{" "}
+        <span
+          className="rounded-full border px-2 py-0.5 font-mono text-xs font-semibold tabular-nums"
+          style={{
+            color: scoreColor(score),
+            borderColor: scoreColor(score),
+            backgroundColor: `color-mix(in srgb, ${scoreColor(score)} 12%, transparent)`,
+          }}
+        >
+          {score}/100
+        </span>
+      </p>
+      {matchedSkills && matchedSkills.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-foreground text-xs font-medium">Cocok:</span>
+          {matchedSkills.map((skill) => (
+            <span
+              key={`matched-${skill}`}
+              className="bg-secondary text-secondary-foreground rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {missingSkills && missingSkills.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-foreground text-xs font-medium">Kurang:</span>
+          {missingSkills.map((skill) => (
+            <span
+              key={`missing-${skill}`}
+              className="border-destructive/40 text-destructive rounded-full border px-2.5 py-0.5 text-xs"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function Row({
@@ -172,21 +311,21 @@ function Row({
   value,
   href,
 }: {
-  label: string
-  value?: string | null
-  href?: string | null
+  label: string;
+  value?: string | null;
+  href?: string | null;
 }) {
-  if (!value) return null
+  if (!value) return null;
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-sm text-foreground">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="text-foreground text-sm">
         {href ? (
           <a
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="break-all text-indigo-600 hover:underline"
+            className="text-accent inline-flex min-h-11 items-center break-all hover:underline md:min-h-9"
           >
             {value}
           </a>
@@ -195,117 +334,135 @@ function Row({
         )}
       </dd>
     </div>
-  )
+  );
 }
 
 function Section({
   title,
   children,
 }: {
-  title: string
-  children: React.ReactNode
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
     <div>
-      <h3 className="mb-2 text-sm font-semibold text-foreground">{title}</h3>
+      <h3 className="text-foreground mb-2 text-sm font-semibold">{title}</h3>
       {children}
     </div>
-  )
+  );
 }
 
 function JobSkeleton() {
   return (
-    <li className="rounded-xl border border-border bg-card p-4">
+    <li className="border-border bg-card rounded-xl border p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1 space-y-2.5">
-          <div className="h-4 w-2/5 rounded bg-muted animate-pulse" />
-          <div className="h-3 w-3/5 rounded bg-muted animate-pulse" />
+          <div className="bg-muted h-4 w-2/5 animate-pulse rounded motion-reduce:animate-none" />
+          <div className="bg-muted h-3 w-3/5 animate-pulse rounded motion-reduce:animate-none" />
           <div className="flex gap-1.5 pt-1">
-            <div className="h-4 w-14 rounded-full bg-muted animate-pulse" />
-            <div className="h-4 w-10 rounded-full bg-muted animate-pulse" />
+            <div className="bg-muted h-4 w-14 animate-pulse rounded-full motion-reduce:animate-none" />
+            <div className="bg-muted h-4 w-10 animate-pulse rounded-full motion-reduce:animate-none" />
           </div>
         </div>
         <div className="flex gap-2">
-          <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-          <div className="h-8 w-8 rounded-md bg-muted animate-pulse" />
+          <div className="bg-muted h-8 w-20 animate-pulse rounded-md motion-reduce:animate-none" />
+          <div className="bg-muted h-8 w-8 animate-pulse rounded-md motion-reduce:animate-none" />
         </div>
       </div>
     </li>
-  )
+  );
 }
 
-export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) {
-  const [url, setUrl] = React.useState("")
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  const [draft, setDraft] = React.useState<Draft | null>(null)
-  const [saving, setSaving] = React.useState(false)
-  const [jobs, setJobs] = React.useState<SavedJob[]>([])
-  const [trackedIds, setTrackedIds] = React.useState<string[]>([])
-  const [addingId, setAddingId] = React.useState<string | null>(null)
-  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
-  const [deletingId, setDeletingId] = React.useState<string | null>(null)
-  const [detailJob, setDetailJob] = React.useState<SavedJob | null>(null)
-  const [tab, setTab] = React.useState<"saved" | "manual" | "scrape">("saved")
+export function JobFetcher({
+  defaultKeywords,
+}: {
+  defaultKeywords?: string[];
+}) {
+  const [url, setUrl] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState<Draft | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [jobs, setJobs] = React.useState<SavedJob[]>([]);
+  const [trackedIds, setTrackedIds] = React.useState<string[]>([]);
+  const [addingId, setAddingId] = React.useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(
+    null,
+  );
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [detailJob, setDetailJob] = React.useState<SavedJob | null>(null);
+  const [tab, setTab] = React.useState<"saved" | "manual" | "scrape">("saved");
   const [searchInput, setSearchInput] = React.useState(
     defaultKeywords?.join(", ") ?? "",
-  )
-  const [location, setLocation] = React.useState("")
-  const [recommending, setRecommending] = React.useState(false)
-  const [recommendError, setRecommendError] = React.useState<string | null>(null)
-  const [recommendSummary, setRecommendSummary] = React.useState("")
-  const [searching, setSearching] = React.useState(false)
+  );
+  const [location, setLocation] = React.useState("");
+  const [recommending, setRecommending] = React.useState(false);
+  const [recommendError, setRecommendError] = React.useState<string | null>(
+    null,
+  );
+  const [recommendSummary, setRecommendSummary] = React.useState("");
+  const [searching, setSearching] = React.useState(false);
   const [searchLog, setSearchLog] = React.useState<
     { id: number; message: string; kind: "info" | "ok" | "error" | "step" }[]
-  >([])
-  const [scrapeResults, setScrapeResults] = React.useState<ScrapeResult[]>([])
-  const [savingKey, setSavingKey] = React.useState<string | null>(null)
-  const [savedKeys, setSavedKeys] = React.useState<string[]>([])
-  const [jobsLoading, setJobsLoading] = React.useState(true)
+  >([]);
+  const [scrapeResults, setScrapeResults] = React.useState<ScrapeResult[]>([]);
+  const [scrapeSaveError, setScrapeSaveError] = React.useState<string | null>(
+    null,
+  );
+  const [savingKey, setSavingKey] = React.useState<string | null>(null);
+  const [savedKeys, setSavedKeys] = React.useState<string[]>([]);
+  const [jobsLoading, setJobsLoading] = React.useState(true);
+  const [jobsError, setJobsError] = React.useState<string | null>(null);
+  const [searchAnnouncement, setSearchAnnouncement] = React.useState("");
+  const handoffConsumed = React.useRef(false);
 
   const loadJobs = React.useCallback(async () => {
+    setJobsError(null);
     try {
-      const [jobsRes, appsRes] = await Promise.all([
-        fetch("/api/jobs"),
-        fetch("/api/applications"),
-      ])
-      if (jobsRes.ok) {
-        const data = await jobsRes.json()
-        setJobs(data.jobs ?? [])
-      }
-      if (appsRes.ok) {
-        const data = await appsRes.json()
-        const ids = (data.applications ?? [])
-          .map((a: { job?: { id: string } }) => a.job?.id)
-          .filter(Boolean) as string[]
-        setTrackedIds(ids)
-      }
+      const jobsRes = await fetch("/api/jobs");
+      if (!jobsRes.ok) throw new Error("load failed");
+      const jobsData = await jobsRes.json();
+      const loadedJobs = (jobsData.jobs ?? []) as SavedJob[];
+      setJobs(loadedJobs);
+      setTrackedIds(loadedJobs.filter((job) => job.tracked).map((job) => job.id));
     } catch {
+      setJobsError("Lowongan gagal dimuat. Periksa koneksi lalu coba lagi.");
     } finally {
-      setJobsLoading(false)
+      setJobsLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadJobs()
-  }, [loadJobs])
+    loadJobs();
+  }, [loadJobs]);
 
-  async function handleFetch(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setDraft(null)
+  const fetchPreview = React.useCallback(async (jobUrl: string) => {
+    setLoading(true);
+    setError(null);
+    setDraft(null);
     try {
       const res = await fetch("/api/jobs/fetch-url", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url }),
-      })
-      const data = await res.json()
+        body: JSON.stringify({ url: jobUrl }),
+      });
+      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal mengambil lowongan")
-        return
+        const message = data.error ?? "Gagal mengambil lowongan";
+        const source = sourceFromUrl(jobUrl);
+        if (source && res.status === 422) {
+          setDraft(
+            emptyDraft(
+              source,
+              jobUrl,
+              `${message}. Lengkapi data lowongan secara manual.`,
+            ),
+          );
+        } else {
+          setError(message);
+        }
+        return;
       }
       setDraft({
         title: data.title ?? "",
@@ -327,18 +484,66 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
         shareToken: data.shareToken ?? "",
         companyRefId: data.companyRefId ?? "",
         companyDetails: data.companyDetails ?? null,
-      })
+        previewToken:
+          typeof data.previewToken === "string" ? data.previewToken : undefined,
+      });
     } catch {
-      setError("Terjadi kesalahan saat mengambil lowongan")
+      setError("Terjadi kesalahan saat mengambil lowongan");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
+  }, []);
+
+  React.useEffect(() => {
+    if (handoffConsumed.current) return;
+    handoffConsumed.current = true;
+
+    const handoffUrl = getExtensionHandoff(window.location.search);
+    if (!handoffUrl) return;
+
+    React.startTransition(() => {
+      setTab("manual");
+      setUrl(handoffUrl);
+    });
+
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete("url");
+    currentUrl.searchParams.delete("source");
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+    );
+    queueMicrotask(() => void fetchPreview(handoffUrl));
+  }, [fetchPreview]);
+
+  function handleFetch(e: React.FormEvent) {
+    e.preventDefault();
+    void fetchPreview(url);
+  }
+
+  function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
+    setDraft((current) =>
+      current
+        ? {
+            ...current,
+            [key]: value,
+            ...(key !== "previewToken" && current.previewToken
+              ? {
+                  previewToken: undefined,
+                  fetchError:
+                    "Preview telah diubah dan akan disimpan sebagai data privat untuk akun Anda.",
+                }
+              : {}),
+          }
+        : current,
+    );
   }
 
   async function handleSave() {
-    if (!draft) return
-    setSaving(true)
-    setError(null)
+    if (!draft) return;
+    setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/jobs", {
         method: "POST",
@@ -362,212 +567,244 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
           shareToken: draft.shareToken || undefined,
           companyRefId: draft.companyRefId || undefined,
           companyDetails: draft.companyDetails || undefined,
+          previewToken: draft.previewToken,
         }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal menyimpan lowongan")
-        return
+        setError(data.error ?? "Gagal menyimpan lowongan");
+        return;
       }
-      setDraft(null)
-      setUrl("")
-      await loadJobs()
+      setDraft(null);
+      setUrl("");
+      await loadJobs();
     } catch {
-      setError("Terjadi kesalahan saat menyimpan")
+      setError("Terjadi kesalahan saat menyimpan");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   async function handleAddToTracker(jobId: string) {
-    if (trackedIds.includes(jobId)) return
-    setAddingId(jobId)
+    if (trackedIds.includes(jobId)) return;
+    setAddingId(jobId);
     try {
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jobId }),
-      })
-      if (res.ok) setTrackedIds((prev) => [...prev, jobId])
+      });
+      if (res.ok) {
+        setTrackedIds((prev) => [...prev, jobId]);
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === jobId ? { ...job, tracked: true } : job,
+          ),
+        );
+      } else {
+        const data = await res.json().catch(() => null);
+        setJobsError(data?.error ?? "Lowongan gagal ditambahkan ke tracker.");
+      }
+    } catch {
+      setJobsError("Lowongan gagal ditambahkan ke tracker. Periksa koneksi Anda.");
     } finally {
-      setAddingId(null)
+      setAddingId(null);
     }
   }
 
   async function handleDeleteJob(jobId: string) {
-    setDeletingId(jobId)
+    setDeletingId(jobId);
     try {
-      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" })
+      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
       if (res.ok) {
-        setJobs((prev) => prev.filter((j) => j.id !== jobId))
-        setTrackedIds((prev) => prev.filter((id) => id !== jobId))
-        setConfirmDeleteId(null)
+        const data = (await res.json()) as {
+          retained?: boolean;
+          retainedForApplication?: boolean;
+        };
+        const retained =
+          data.retained === true || data.retainedForApplication === true;
+        if (retained) {
+          setJobs((prev) =>
+            prev.map((job) =>
+              job.id === jobId
+                ? {
+                    ...job,
+                    origin: undefined,
+                  }
+                : job,
+            ),
+          );
+        } else {
+          setJobs((prev) => prev.filter((job) => job.id !== jobId));
+          setTrackedIds((prev) => prev.filter((id) => id !== jobId));
+        }
+        setConfirmDeleteId(null);
+      } else {
+        const data = await res.json().catch(() => null);
+        setJobsError(data?.error ?? "Lowongan gagal dihapus. Coba lagi.");
       }
+    } catch {
+      setJobsError("Lowongan gagal dihapus. Periksa koneksi lalu coba lagi.");
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
   }
 
   async function handleRecommend() {
-    setRecommending(true)
-    setRecommendError(null)
+    setRecommending(true);
+    setRecommendError(null);
     try {
-      const res = await fetch("/api/jobs/recommend-keywords", { method: "POST" })
-      const data = await res.json()
+      const res = await fetch("/api/jobs/recommend-keywords", {
+        method: "POST",
+      });
+      const data = await res.json();
       if (res.ok) {
-        if (data.keywords?.length) setSearchInput(data.keywords.join(", "))
-        setRecommendSummary(data.summary ?? "")
+        if (data.keywords?.length) setSearchInput(data.keywords.join(", "));
+        setRecommendSummary(data.summary ?? "");
       } else {
-        setRecommendError(data.error ?? "Gagal memuat rekomendasi")
+        setRecommendError(data.error ?? "Gagal memuat rekomendasi");
       }
     } catch {
-      setRecommendError("Terjadi kesalahan saat memuat rekomendasi")
+      setRecommendError("Terjadi kesalahan saat memuat rekomendasi");
     } finally {
-      setRecommending(false)
+      setRecommending(false);
     }
   }
 
   async function handleSearch() {
-    if (searching) return
-    setSearching(true)
-    setSearchLog([])
-    setScrapeResults([])
-    setRecommendError(null)
-    let logId = 0
+    if (searching) return;
+    setSearching(true);
+    setSearchLog([]);
+    setScrapeResults([]);
+    setRecommendError(null);
+    setSearchAnnouncement("Menyiapkan pencarian lowongan.");
+    let logId = 0;
     const push = (
       message: string,
       kind: "info" | "ok" | "error" | "step" = "info",
-    ) => setSearchLog((prev) => [...prev, { id: logId++, message, kind }])
+    ) => {
+      setSearchLog((prev) => [...prev, { id: logId++, message, kind }]);
+      setSearchAnnouncement(message);
+    };
 
     const applyEvent = (ev: SearchEvent) => {
       switch (ev.type) {
         case "start":
-          push("Memulai pencarian…", "step")
-          break
+          push("Memulai pencarian…", "step");
+          break;
         case "search":
         case "detail":
-          push(ev.message, "step")
-          break
+          push(ev.message, "step");
+          break;
         case "links":
-          push(ev.message, "info")
-          break
+          push(ev.message, "info");
+          break;
         case "result":
           setScrapeResults((prev) => [
             ...prev,
             { job: ev.job as unknown as ScrapeJobPayload, match: ev.match },
-          ])
-          break
+          ]);
+          setSearchAnnouncement(
+            `Lowongan ${ev.job.title} ditemukan dengan skor kecocokan ${ev.match.score} dari 100.`,
+          );
+          break;
         case "done":
-          setSearchLog([{ id: -1, message: ev.message, kind: "ok" }])
-          break
+          setSearchLog([{ id: -1, message: ev.message, kind: "ok" }]);
+          setSearchAnnouncement(ev.message);
+          break;
         case "error":
-          push(ev.message, "error")
-          break
+          push(ev.message, "error");
+          break;
       }
-    }
+    };
 
     try {
       const res = await fetch("/api/jobs/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ keywords: searchInput, location }),
-      })
+      });
       if (!res.ok || !res.body) {
-        push("Gagal memulai pencarian.", "error")
-        return
+        push("Gagal memulai pencarian.", "error");
+        return;
       }
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ""
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const parts = buf.split("\n\n")
-        buf = parts.pop() ?? ""
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() ?? "";
         for (const part of parts) {
-          const text = part.trim()
-          if (!text.startsWith("data:")) continue
-          const json = text.slice(5).trim()
-          if (!json) continue
-          let ev: SearchEvent
+          const text = part.trim();
+          if (!text.startsWith("data:")) continue;
+          const json = text.slice(5).trim();
+          if (!json) continue;
+          let ev: SearchEvent;
           try {
-            ev = JSON.parse(json) as SearchEvent
+            ev = JSON.parse(json) as SearchEvent;
           } catch {
-            continue
+            continue;
           }
-          applyEvent(ev)
+          applyEvent(ev);
         }
       }
     } catch {
-      push("Koneksi terputus saat mencari.", "error")
+      push("Koneksi terputus saat mencari.", "error");
     } finally {
-      setSearching(false)
+      setSearching(false);
     }
   }
 
   async function handleSaveScrape(r: ScrapeResult) {
-    const key = r.job.sourceUrl
-    if (savedKeys.includes(key)) return
-    setSavingKey(key)
+    const key = r.job.sourceUrl;
+    if (savedKeys.includes(key)) return;
+    setSavingKey(key);
+    setScrapeSaveError(null);
     try {
       const res = await fetch("/api/jobs/recommendations", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(r.job),
-      })
-      const data = await res.json()
+        body: JSON.stringify({ previewToken: r.job.previewToken }),
+      });
+      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal menyimpan lowongan")
-        return
+        setScrapeSaveError(data.error ?? "Gagal menyimpan lowongan");
+        return;
       }
-      setSavedKeys((prev) => [...prev, key])
-      await loadJobs()
+      setSavedKeys((prev) => [...prev, key]);
+      await loadJobs();
     } catch {
-      setError("Terjadi kesalahan saat menyimpan")
+      setScrapeSaveError("Terjadi kesalahan saat menyimpan lowongan.");
     } finally {
-      setSavingKey(null)
+      setSavingKey(null);
     }
   }
 
-  const displayJobs = jobs
-  const cd = draft?.companyDetails
-  const jobCoreRows = draft
-    ? [
-        { label: "Title", value: draft.title },
-        { label: "Company", value: draft.company },
-        { label: "Company ID", value: draft.companyRefId },
-        { label: "Job ID", value: draft.externalJobId },
-        { label: "Share Token", value: draft.shareToken },
-        { label: "Salary", value: draft.salary },
-        { label: "Type", value: draft.employmentType },
-        { label: "Experience", value: draft.experience },
-        { label: "Education", value: draft.education },
-        { label: "Location", value: draft.location },
-        { label: "Category", value: draft.category },
-        { label: "Recruiter", value: draft.recruiter },
-      ]
-    : []
+  const displayJobs = jobs;
+  const cd = draft?.companyDetails;
   const companyRows = cd
     ? [
-        { label: "Name", value: cd.name },
-        { label: "Industry", value: cd.industry },
-        { label: "Size", value: cd.size },
-        { label: "Website", value: cd.website, href: cd.website },
+        { label: "Nama", value: cd.name },
+        { label: "Industri", value: cd.industry },
+        { label: "Ukuran", value: cd.size },
+        { label: "Situs web", value: cd.website, href: cd.website },
         { label: "LinkedIn", value: cd.linkedin, href: cd.linkedin },
         { label: "Instagram", value: cd.instagram, href: cd.instagram },
         { label: "Twitter", value: cd.twitter, href: cd.twitter },
         { label: "Facebook", value: cd.facebook, href: cd.facebook },
-        { label: "Office Address", value: cd.address },
+        { label: "Alamat kantor", value: cd.address },
       ]
-    : []
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1">
+      <div className="border-border bg-card inline-flex flex-wrap gap-1 rounded-lg border p-1">
         {(
           [
-            ["saved", `Tersimpan (${jobs.length})`],
+            ["saved", `Lowongan saya (${jobs.length})`],
             ["manual", "Input Manual (Link)"],
             ["scrape", "Cari (Scrape)"],
           ] as const
@@ -576,8 +813,9 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
             key={key}
             type="button"
             onClick={() => setTab(key)}
+            aria-pressed={tab === key}
             className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "min-h-11 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               tab === key
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -589,18 +827,19 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
       </div>
 
       {tab === "scrape" && (
-        <section className="rounded-xl border border-border bg-card p-5 md:p-6">
+        <section className="border-border bg-card rounded-xl border p-5 md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              <h2 className="text-foreground text-lg font-semibold tracking-tight">
                 Cari Lowongan (Scrape)
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Biarkan AI menyusun kata kunci dari profil CV Anda, atau ketik
-                sendiri. Hasil tidak otomatis tersimpan — pilih yang ingin diambil.
+                sendiri. Hasil tidak otomatis tersimpan — pilih yang ingin
+                diambil.
               </p>
             </div>
-            <SparklesIcon className="size-10 text-accent" />
+            <SparklesIcon className="text-accent size-10" />
           </div>
 
           <Button
@@ -610,46 +849,66 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
             disabled={recommending}
           >
             {recommending ? (
-              <Loader2Icon className="size-4 animate-spin" />
+              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
             ) : (
               <SparklesIcon className="size-4" />
             )}
             {recommending ? "Menganalisis profil…" : "Cari Rekomendasi (AI)"}
           </Button>
           {recommendError && (
-            <p className="mt-2 text-sm text-red-600">{recommendError}</p>
+            <p className="text-destructive mt-2 text-sm" role="alert">
+              {recommendError}
+            </p>
           )}
           {recommendSummary && (
-            <p className="mt-3 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+            <p className="bg-secondary text-secondary-foreground mt-3 rounded-md px-3 py-2 text-sm">
               {recommendSummary}
             </p>
           )}
 
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="mis. React, Node.js (skill/kata kunci)"
-              className="flex-1"
-              disabled={searching}
-            />
-            <Button
-              onClick={handleSearch}
-              disabled={searching || !searchInput.trim()}
+          <div className="mt-4 flex flex-col gap-2">
+            <label
+              htmlFor="job-keywords"
+              className="text-foreground text-sm font-medium"
             >
-              {searching ? (
-                <Loader2Icon className="size-4 animate-spin" />
-              ) : (
-                <SearchIcon className="size-4" />
-              )}
-              {searching ? "Mencari…" : "Cari"}
-            </Button>
+              Kata kunci lowongan
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="job-keywords"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="mis. React, Node.js (skill/kata kunci)"
+                className="flex-1"
+                disabled={searching}
+              />
+              <Button
+                onClick={handleSearch}
+                disabled={searching || !searchInput.trim()}
+              >
+                {searching ? (
+                  <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+                ) : (
+                  <SearchIcon className="size-4" />
+                )}
+                {searching ? "Mencari…" : "Cari"}
+              </Button>
+            </div>
           </div>
+
+          <p
+            className="sr-only"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {searchAnnouncement}
+          </p>
 
           <div className="mt-4 flex flex-col gap-2">
             <label
               htmlFor="job-location"
-              className="text-sm font-medium text-foreground"
+              className="text-foreground text-sm font-medium"
             >
               Lokasi
             </label>
@@ -663,15 +922,16 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
             />
             <div className="flex flex-wrap gap-1.5">
               {LOCATION_CHIPS.map((chip) => {
-                const active = location === chip.value
+                const active = location === chip.value;
                 return (
                   <button
                     key={chip.label}
                     type="button"
                     onClick={() => setLocation(chip.value)}
+                    aria-pressed={active}
                     disabled={searching}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      "min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-colors",
                       active
                         ? "border-border bg-secondary text-foreground"
                         : "border-border text-muted-foreground hover:text-foreground",
@@ -679,17 +939,17 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
                   >
                     {chip.label}
                   </button>
-                )
+                );
               })}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Hanya menampilkan lowongan ≤30 hari &amp; masih dibuka.
             </p>
           </div>
 
           {searchLog.length > 0 && (
             <div className="mt-4">
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-foreground text-sm font-medium">
                 Proses
               </span>
               <ul className="mt-2 space-y-1.5">
@@ -697,13 +957,13 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
                   <li key={l.id} className="flex items-start gap-2 text-sm">
                     <span className="mt-0.5 shrink-0">
                       {l.kind === "ok" ? (
-                        <CheckCircle2Icon className="size-4 text-accent" />
+                        <CheckCircle2Icon className="text-accent size-4" />
                       ) : l.kind === "error" ? (
-                        <XCircleIcon className="size-4 text-destructive" />
+                        <XCircleIcon className="text-destructive size-4" />
                       ) : searching ? (
-                        <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+                        <Loader2Icon className="text-muted-foreground size-4 animate-spin motion-reduce:animate-none" />
                       ) : (
-                        <CircleIcon className="size-4 text-muted-foreground" />
+                        <CircleIcon className="text-muted-foreground size-4" />
                       )}
                     </span>
                     <span
@@ -725,47 +985,48 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
 
           {scrapeResults.length > 0 && (
             <div className="mt-5">
-              <span className="text-sm font-medium text-foreground">
+              {scrapeSaveError ? (
+                <p className="text-destructive mb-3 text-sm" role="alert">
+                  {scrapeSaveError}
+                </p>
+              ) : null}
+              <span className="text-foreground text-sm font-medium">
                 Hasil Pencarian ({scrapeResults.length})
               </span>
               <ul className="mt-2 flex flex-col gap-3">
                 {scrapeResults.map((r) => {
-                  const saved = savedKeys.includes(r.job.sourceUrl)
-                  const key = r.job.sourceUrl
+                  const saved = savedKeys.includes(r.job.sourceUrl);
+                  const key = r.job.sourceUrl;
                   return (
                     <li
                       key={key}
-                      className="rounded-xl border border-border bg-card p-4"
+                      className="border-border bg-card rounded-xl border p-4"
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">
+                            <span className="text-foreground font-medium">
                               {r.job.title}
                             </span>
                             <SourceBadge source={r.job.source} />
-                            <span
-                              className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
-                              style={{
-                                color: scoreColor(r.match.score),
-                                borderColor: scoreColor(r.match.score),
-                                backgroundColor: `color-mix(in srgb, ${scoreColor(r.match.score)} 12%, transparent)`,
-                              }}
-                            >
-                              {r.match.score}
-                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {[r.job.company, r.job.location].filter(Boolean).join(" · ") ||
-                              "—"}
+                          <p className="text-muted-foreground text-sm">
+                            {[r.job.company, r.job.location]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
                             {r.job.salary ? ` · ${r.job.salary}` : ""}
                           </p>
+                          <MatchScoreBlock
+                            score={r.match.score}
+                            matchedSkills={r.match.matchedSkills}
+                            missingSkills={r.match.missingSkills}
+                          />
                           {r.job.skills.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {r.job.skills.slice(0, 8).map((s) => (
                                 <span
                                   key={s}
-                                  className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-secondary-foreground"
+                                  className="bg-secondary text-secondary-foreground rounded-full px-2.5 py-0.5 text-xs"
                                 >
                                   {s}
                                 </span>
@@ -778,7 +1039,7 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
                             href={r.job.sourceUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
+                            className="text-accent inline-flex min-h-11 items-center gap-1 text-sm hover:underline"
                           >
                             Buka <ExternalLinkIcon className="size-3.5" />
                           </a>
@@ -819,16 +1080,20 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
                             disabled={saved || savingKey === key}
                           >
                             {savingKey === key ? (
-                              <Loader2Icon className="size-3.5 animate-spin" />
+                              <Loader2Icon className="size-3.5 animate-spin motion-reduce:animate-none" />
                             ) : (
                               <SaveIcon className="size-3.5" />
                             )}
-                            {saved ? "Tersimpan" : savingKey === key ? "Menyimpan…" : "Simpan"}
+                            {saved
+                              ? "Tersimpan"
+                              : savingKey === key
+                                ? "Menyimpan…"
+                                : "Simpan"}
                           </Button>
                         </div>
                       </div>
                     </li>
-                  )
+                  );
                 })}
               </ul>
             </div>
@@ -838,8 +1103,14 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
 
       {tab === "manual" && (
         <>
-          <form onSubmit={handleFetch} className="rounded-xl border border-border bg-card p-5">
-            <label htmlFor="job-url" className="mb-2 block text-sm font-medium text-foreground">
+          <form
+            onSubmit={handleFetch}
+            className="border-border bg-card rounded-xl border p-5"
+          >
+            <label
+              htmlFor="job-url"
+              className="text-foreground mb-2 block text-sm font-medium"
+            >
               URL Lowongan
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -852,14 +1123,18 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
               />
               <Button type="submit" disabled={loading || !url.trim()}>
                 {loading ? (
-                  <Loader2Icon className="size-4 animate-spin" />
+                  <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
                 ) : (
                   <SearchIcon className="size-4" />
                 )}
                 {loading ? "Mengambil…" : "Ambil"}
               </Button>
             </div>
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            {error && (
+              <p className="text-destructive mt-3 text-sm" role="alert">
+                {error}
+              </p>
+            )}
           </form>
 
           {!draft && loading && (
@@ -869,61 +1144,104 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
           )}
 
           {draft && (
-            <div className="rounded-xl border border-border bg-card p-5">
+            <div className="border-border bg-card rounded-xl border p-5">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <SourceBadge source={draft.source} />
-                  <span className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                  <span className="text-muted-foreground max-w-[16rem] truncate text-xs">
                     {draft.sourceUrl}
                   </span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setDraft(null)} aria-label="Tutup">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDraft(null)}
+                  aria-label="Tutup"
+                >
                   <XIcon className="size-4" />
                 </Button>
               </div>
 
               {draft.fetchError && (
-                <p className="mb-3 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+                <p className="bg-secondary text-secondary-foreground mb-3 rounded-md px-3 py-2 text-sm">
                   {draft.fetchError}
                 </p>
               )}
 
               <div className="space-y-5">
-                <Section title="Job Core">
-                  <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-                    {jobCoreRows.map((r) => (
-                      <Row key={r.label} label={r.label} value={r.value} />
+                <Section title="Detail Lowongan">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        ["title", "Posisi", true],
+                        ["company", "Perusahaan", false],
+                        ["location", "Lokasi", false],
+                        ["salary", "Gaji", false],
+                        ["employmentType", "Tipe pekerjaan", false],
+                        ["experience", "Pengalaman", false],
+                        ["education", "Pendidikan", false],
+                        ["category", "Kategori", false],
+                        ["recruiter", "Perekrut", false],
+                      ] as const
+                    ).map(([key, label, required]) => (
+                      <label
+                        key={key}
+                        className="text-foreground space-y-1 text-sm font-medium"
+                      >
+                        {label}
+                        {required ? " *" : ""}
+                        <Input
+                          value={draft[key]}
+                          required={required}
+                          onChange={(event) =>
+                            updateDraft(key, event.target.value)
+                          }
+                        />
+                      </label>
                     ))}
-                  </dl>
+                    <label className="text-foreground space-y-1 text-sm font-medium sm:col-span-2">
+                      Keahlian (pisahkan dengan koma)
+                      <Input
+                        value={draft.skills.join(", ")}
+                        onChange={(event) =>
+                          updateDraft(
+                            "skills",
+                            event.target.value
+                              .split(",")
+                              .map((skill) => skill.trim())
+                              .filter(Boolean),
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
                 </Section>
 
-                {draft.skills.length > 0 && (
-                  <Section title="Skills Required">
-                    <div className="flex flex-wrap gap-2">
-                      {draft.skills.map((s) => (
-                        <span key={s} className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </Section>
-                )}
-
-                <Section title="Job Description">
-                  <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                    {draft.description || "—"}
-                  </p>
+                <Section title="Deskripsi Pekerjaan">
+                  <Textarea
+                    value={draft.description}
+                    onChange={(event) =>
+                      updateDraft("description", event.target.value)
+                    }
+                    className="min-h-40"
+                    placeholder="Masukkan deskripsi dan kualifikasi lowongan"
+                  />
                 </Section>
 
                 {cd && companyRows.some((r) => r.value) && (
-                  <Section title="Company Details">
+                  <Section title="Detail Perusahaan">
                     <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                       {companyRows.map((r) => (
-                        <Row key={r.label} label={r.label} value={r.value} href={r.href} />
+                        <Row
+                          key={r.label}
+                          label={r.label}
+                          value={r.value}
+                          href={r.href}
+                        />
                       ))}
                     </dl>
                     {cd.about && (
-                      <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                      <p className="text-muted-foreground mt-3 text-sm whitespace-pre-wrap">
                         {cd.about}
                       </p>
                     )}
@@ -932,11 +1250,22 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
               </div>
 
               <div className="mt-5 flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setDraft(null)} disabled={saving}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setDraft(null)}
+                  disabled={saving}
+                >
                   Batal
                 </Button>
-                <Button onClick={handleSave} disabled={saving || !draft.title.trim()}>
-                  {saving ? <Loader2Icon className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || !draft.title.trim()}
+                >
+                  {saving ? (
+                    <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    <SaveIcon className="size-4" />
+                  )}
                   {saving ? "Menyimpan…" : "Simpan"}
                 </Button>
               </div>
@@ -947,6 +1276,14 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
 
       {tab === "saved" && (
         <div>
+          {jobsError ? (
+            <div className="border-destructive/40 bg-destructive/10 text-destructive mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm" role="alert">
+              <span>{jobsError}</span>
+              <Button variant="outline" size="sm" onClick={() => void loadJobs()}>
+                Coba lagi
+              </Button>
+            </div>
+          ) : null}
           {jobsLoading && displayJobs.length === 0 ? (
             <ul className="flex flex-col gap-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -954,84 +1291,129 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
               ))}
             </ul>
           ) : displayJobs.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
-              <BriefcaseIcon className="size-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                Belum ada lowongan tersimpan.
+            <div className="border-border bg-card/50 flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
+              <BriefcaseIcon className="text-muted-foreground size-8" />
+              <p className="text-muted-foreground text-sm">
+                 Belum ada lowongan tersimpan atau dilacak.
               </p>
             </div>
           ) : (
             <ul className="flex flex-col gap-3">
               {displayJobs.map((job) => (
-                <li key={job.id} className="rounded-xl border border-border bg-card p-4">
+                <li
+                  key={job.id}
+                  className="border-border bg-card rounded-xl border p-4"
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{job.title}</span>
+                        <span className="text-foreground font-medium">
+                          {job.title}
+                        </span>
                         <SourceBadge source={job.source} />
                         <OriginPill origin={job.origin} />
-                        {job.matchScore != null && (
-                          <span
-                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
-                            style={{
-                              color: scoreColor(job.matchScore),
-                              borderColor: scoreColor(job.matchScore),
-                              backgroundColor: `color-mix(in srgb, ${scoreColor(job.matchScore)} 12%, transparent)`,
-                            }}
-                          >
-                            {job.matchScore}
-                          </span>
-                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {[job.company, job.location].filter(Boolean).join(" · ") || "—"}
+                      <p className="text-muted-foreground text-sm">
+                        {[job.company, job.location]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
                         {job.salary ? ` · ${job.salary}` : ""}
                       </p>
                       {job.postedAt && (
-                        <p className="text-xs text-muted-foreground">
-                          Diposting {new Date(job.postedAt).toLocaleDateString("id-ID")}
+                        <p className="text-muted-foreground text-xs">
+                          Diposting{" "}
+                          {new Date(job.postedAt).toLocaleDateString("id-ID")}
                         </p>
                       )}
+                      {job.matchScore != null ? (
+                        <MatchScoreBlock
+                          score={job.matchScore}
+                          matchedSkills={job.matchedSkills}
+                          missingSkills={job.missingSkills}
+                        />
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {trackedIds.includes(job.id) ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
                           <ListChecksIcon className="size-3.5" />
                           Di tracker
                         </span>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => handleAddToTracker(job.id)} disabled={addingId === job.id}>
-                          {addingId === job.id ? <Loader2Icon className="size-3.5 animate-spin" /> : <ListChecksIcon className="size-3.5" />}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddToTracker(job.id)}
+                          disabled={addingId === job.id}
+                        >
+                          {addingId === job.id ? (
+                            <Loader2Icon className="size-3.5 animate-spin motion-reduce:animate-none" />
+                          ) : (
+                            <ListChecksIcon className="size-3.5" />
+                          )}
                           {addingId === job.id ? "Menambahkan…" : "Tracker"}
                         </Button>
                       )}
-                      <a href={job.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+                      <a
+                        href={job.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent inline-flex min-h-11 items-center gap-1 text-sm hover:underline"
+                      >
                         Buka <ExternalLinkIcon className="size-3.5" />
                       </a>
-                      <Button variant="ghost" size="icon" aria-label="Lihat detail" onClick={() => setDetailJob(job)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Lihat detail"
+                        onClick={() => setDetailJob(job)}
+                      >
                         <EyeIcon className="size-4" />
                       </Button>
                       <MatchDialog
                         jobId={job.id}
                         trigger={
-                          <Button variant="ghost" size="sm" className="gap-1 text-indigo-600 hover:text-indigo-600">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-accent hover:text-accent gap-1"
+                          >
                             <SparklesIcon className="size-3.5" />
                             Cek
                           </Button>
                         }
                       />
-                      {confirmDeleteId === job.id ? (
+                      {!job.origin ? null : confirmDeleteId === job.id ? (
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)} disabled={deletingId === job.id}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmDeleteId(null)}
+                            disabled={deletingId === job.id}
+                          >
                             Batal
                           </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-600" onClick={() => handleDeleteJob(job.id)} disabled={deletingId === job.id}>
-                            {deletingId === job.id ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteJob(job.id)}
+                            disabled={deletingId === job.id}
+                          >
+                            {deletingId === job.id ? (
+                              <Loader2Icon className="size-3.5 animate-spin motion-reduce:animate-none" />
+                            ) : null}
                             {deletingId === job.id ? "Menghapus…" : "Hapus"}
                           </Button>
                         </div>
                       ) : (
-                        <Button variant="ghost" size="icon" aria-label="Hapus lowongan" onClick={() => setConfirmDeleteId(job.id)} disabled={deletingId === job.id}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Hapus lowongan"
+                          onClick={() => setConfirmDeleteId(job.id)}
+                          disabled={deletingId === job.id}
+                        >
                           <Trash2Icon className="size-4" />
                         </Button>
                       )}
@@ -1046,47 +1428,47 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
 
       <JobDetailSheet job={detailJob} onClose={() => setDetailJob(null)} />
     </div>
-  )
+  );
 }
 
 function JobDetailSheet({
   job,
   onClose,
 }: {
-  job: SavedJob | null
-  onClose: () => void
+  job: SavedJob | null;
+  onClose: () => void;
 }) {
-  const cd = job?.companyDetails ?? null
+  const cd = job?.companyDetails ?? null;
   const jobCoreRows = job
     ? [
-        { label: "Title", value: job.title },
-        { label: "Company", value: job.company },
-        { label: "Company ID", value: job.companyRefId },
-        { label: "Job ID", value: job.externalJobId },
-        { label: "Share Token", value: job.shareToken },
-        { label: "Salary", value: job.salary },
-        { label: "Type", value: job.employmentType },
-        { label: "Experience", value: job.experience },
-        { label: "Education", value: job.education },
-        { label: "Location", value: job.location },
-        { label: "Category", value: job.category },
-        { label: "Recruiter", value: job.recruiter },
+        { label: "Posisi", value: job.title },
+        { label: "Perusahaan", value: job.company },
+        { label: "ID perusahaan", value: job.companyRefId },
+        { label: "ID lowongan", value: job.externalJobId },
+        { label: "Token berbagi", value: job.shareToken },
+        { label: "Gaji", value: job.salary },
+        { label: "Tipe pekerjaan", value: job.employmentType },
+        { label: "Pengalaman", value: job.experience },
+        { label: "Pendidikan", value: job.education },
+        { label: "Lokasi", value: job.location },
+        { label: "Kategori", value: job.category },
+        { label: "Perekrut", value: job.recruiter },
       ]
-    : []
+    : [];
 
   const companyRows = cd
     ? [
-        { label: "Name", value: cd.name },
-        { label: "Industry", value: cd.industry },
-        { label: "Size", value: cd.size },
-        { label: "Website", value: cd.website, href: cd.website },
+        { label: "Nama", value: cd.name },
+        { label: "Industri", value: cd.industry },
+        { label: "Ukuran", value: cd.size },
+        { label: "Situs web", value: cd.website, href: cd.website },
         { label: "LinkedIn", value: cd.linkedin, href: cd.linkedin },
         { label: "Instagram", value: cd.instagram, href: cd.instagram },
         { label: "Twitter", value: cd.twitter, href: cd.twitter },
         { label: "Facebook", value: cd.facebook, href: cd.facebook },
-        { label: "Office Address", value: cd.address },
+        { label: "Alamat kantor", value: cd.address },
       ]
-    : []
+    : [];
 
   return (
     <Sheet open={!!job} onOpenChange={(o) => !o && onClose()}>
@@ -1096,14 +1478,14 @@ function JobDetailSheet({
             <SheetHeader>
               <div className="flex items-center gap-2">
                 <SourceBadge source={job.source} />
-                <span className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                <span className="text-muted-foreground max-w-[16rem] truncate text-xs">
                   {job.sourceUrl}
                 </span>
               </div>
               <SheetTitle className="line-clamp-2">{job.title}</SheetTitle>
             </SheetHeader>
             <div className="flex-1 space-y-5 overflow-y-auto p-4">
-              <Section title="Job Core">
+              <Section title="Detail Lowongan">
                 <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                   {jobCoreRows.map((r) => (
                     <Row key={r.label} label={r.label} value={r.value} />
@@ -1112,12 +1494,12 @@ function JobDetailSheet({
               </Section>
 
               {job.skills && job.skills.length > 0 && (
-                <Section title="Skills Required">
+                <Section title="Keahlian yang Dibutuhkan">
                   <div className="flex flex-wrap gap-2">
                     {job.skills.map((s) => (
                       <span
                         key={s}
-                        className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground"
+                        className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm"
                       >
                         {s}
                       </span>
@@ -1126,14 +1508,14 @@ function JobDetailSheet({
                 </Section>
               )}
 
-              <Section title="Job Description">
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+              <Section title="Deskripsi Lowongan">
+                <p className="text-muted-foreground text-sm whitespace-pre-wrap">
                   {job.description || "—"}
                 </p>
               </Section>
 
-                {cd && companyRows.some((r) => r.value) && (
-                <Section title="Company Details">
+              {cd && companyRows.some((r) => r.value) && (
+                <Section title="Detail Perusahaan">
                   <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                     {companyRows.map((r) => (
                       <Row
@@ -1145,7 +1527,7 @@ function JobDetailSheet({
                     ))}
                   </dl>
                   {cd.about && (
-                    <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                    <p className="text-muted-foreground mt-3 text-sm whitespace-pre-wrap">
                       {cd.about}
                     </p>
                   )}
@@ -1156,5 +1538,5 @@ function JobDetailSheet({
         ) : null}
       </SheetContent>
     </Sheet>
-  )
+  );
 }

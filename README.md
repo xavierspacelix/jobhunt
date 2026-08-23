@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JobHunter
 
-## Getting Started
+JobHunter adalah web app pribadi untuk menganalisis CV, mengimpor dan mencari
+lowongan Glints/Jobstreet, menilai kecocokan, serta melacak progres lamaran.
 
-First, run the development server:
+## Requirements
+
+- Node.js 24
+- Yarn 1.22.22
+- PostgreSQL
+- Optional MinIO for durable CV storage
+- Optional OpenAI-compatible LLM endpoint
+- Chromium dependencies are installed automatically in Docker
+
+## Local Setup
 
 ```bash
-npm run dev
-# or
+cp .env.example .env
+yarn install --frozen-lockfile
+yarn prisma generate
+yarn prisma migrate dev
+yarn db:seed
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. The development seed creates
+`demo@jobhunter.dev` with password `demopassword`; do not use this seed as an
+unreviewed production bootstrap.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without MinIO, CV files are stored under `uploads/cvs`. The Docker deployment
+mounts this directory to a named volume; MinIO remains recommended for durable
+production storage.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Configuration
 
-## Learn More
+Required:
 
-To learn more about Next.js, take a look at the following resources:
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_URL` in production
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Optional:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`
+- `MINIO_*`
+- `RATE_LIMIT_*`
 
-## Deploy on Vercel
+See `.env.example` and `context/library-docs.md`. Dedicated OpenAI/Gemini SDKs
+and email sending are not implemented.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Verification
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+yarn lint
+yarn typecheck
+yarn test
+yarn build
+```
+
+## Docker Deployment
+
+`docker-compose.yml` expects an external Traefik network named
+`traefik-public`, an external PostgreSQL database, and optionally external
+MinIO.
+
+```bash
+docker compose up --build -d
+docker compose run --rm web yarn prisma migrate status
+```
+
+The container runs migrations before starting Next.js, installs Chromium for
+scraper fallback, runs as a non-root user, and persists local fallback uploads.
+
+## Chrome Extension
+
+Authenticated users can download the Manifest V3 extension from the dashboard.
+It hands a Glints/Jobstreet tab URL to `/jobs` for preview and explicit save; it
+does not hold credentials or write directly to the API.
+
+Rebuild its artifact with:
+
+```bash
+bash scripts/build-extension.sh
+```
+
+## Documentation
+
+Start with `AGENTS.md`, then follow its ordered reading list under `context/`.
+Feature specs are the scope source of truth.

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "JobHunter Safe Handoff",
+  "description": "Kirim URL lowongan Glints atau Jobstreet ke JobHunter untuk ditinjau sebelum disimpan.",
+  "version": "1.0.0",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*"
+  ],
+  "action": {
+    "default_title": "Kirim ke JobHunter",
+    "default_popup": "popup.html"
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobHunter Safe Handoff</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">JOBHUNTER</p>
+        <h1>Kirim lowongan</h1>
+        <p class="intro">
+          Buka preview di JobHunter. Anda tetap meninjau dan menyimpan lowongan secara manual.
+        </p>
+      </header>
+
+      <section aria-labelledby="settings-heading">
+        <h2 id="settings-heading">Tujuan handoff</h2>
+        <label for="base-url">URL JobHunter</label>
+        <input id="base-url" name="base-url" type="url" inputmode="url" spellcheck="false" />
+        <p class="hint">Gunakan HTTPS, atau HTTP hanya untuk localhost.</p>
+
+        <label class="checkbox-row" for="detect-localhost">
+          <input id="detect-localhost" name="detect-localhost" type="checkbox" />
+          <span>Gunakan localhost:3000 jika tersedia</span>
+        </label>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <button id="handoff" type="button">Buka di JobHunter</button>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

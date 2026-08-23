@@ -1,27 +1,97 @@
 import { z } from "zod";
 
-export const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  AUTH_SECRET: z.string().min(1),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  AUTH_GOOGLE_ID: z.string().optional(),
-  AUTH_GOOGLE_SECRET: z.string().optional(),
-  RESEND_API_KEY: z.string().optional(),
-  OPENAI_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().optional(),
-  MINIO_ENDPOINT: z.string().optional(),
-  MINIO_PORT: z.coerce.number().optional(),
-  MINIO_ACCESS_KEY: z.string().optional(),
-  MINIO_SECRET_KEY: z.string().optional(),
-  MINIO_BUCKET: z.string().optional(),
-  MINIO_USE_SSL: z.enum(["true", "false"]).optional(),
-  LLM_BASE_URL: z.string().url().optional(),
-  LLM_API_KEY: z.string().optional(),
-  LLM_MODEL: z.string().optional(),
-});
+const optionalString = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().min(1).optional(),
+);
+
+const optionalUrl = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().url().optional(),
+);
+
+const optionalPositiveInt = z.preprocess(
+  (value) => (value === "" || value === undefined ? undefined : value),
+  z.coerce.number().int().positive().optional(),
+);
+
+export const envSchema = z
+  .object({
+    DATABASE_URL: z.string().url(),
+    AUTH_SECRET: z.string().min(1),
+    AUTH_URL: optionalUrl,
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+    MINIO_ENDPOINT: optionalString,
+    MINIO_PORT: optionalPositiveInt,
+    MINIO_ACCESS_KEY: optionalString,
+    MINIO_SECRET_KEY: optionalString,
+    MINIO_BUCKET: optionalString,
+    MINIO_USE_SSL: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.enum(["true", "false"]).optional(),
+    ),
+    LLM_BASE_URL: optionalUrl,
+    LLM_API_KEY: optionalString,
+    LLM_MODEL: optionalString,
+    RATE_LIMIT_WINDOW_MS: optionalPositiveInt,
+    RATE_LIMIT_MATCH_MAX: optionalPositiveInt,
+    RATE_LIMIT_COVER_LETTER_MAX: optionalPositiveInt,
+    RATE_LIMIT_CV_UPLOAD_MAX: optionalPositiveInt,
+    RATE_LIMIT_JOB_SEARCH_MAX: optionalPositiveInt,
+    RATE_LIMIT_JOB_FETCH_MAX: optionalPositiveInt,
+    RATE_LIMIT_RECOMMEND_KEYWORDS_MAX: optionalPositiveInt,
+    RATE_LIMIT_RECOMMENDATION_SAVE_MAX: optionalPositiveInt,
+    RATE_LIMIT_REGISTER_MAX: optionalPositiveInt,
+    RATE_LIMIT_LOGIN_MAX: optionalPositiveInt,
+  })
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === "production" && !env.AUTH_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["AUTH_URL"],
+        message: "AUTH_URL is required in production",
+      });
+    }
+    if (env.NODE_ENV === "production" && env.AUTH_SECRET.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["AUTH_SECRET"],
+        message: "AUTH_SECRET must be at least 32 characters in production",
+      });
+    }
+
+    if (Boolean(env.LLM_BASE_URL) !== Boolean(env.LLM_API_KEY)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [env.LLM_BASE_URL ? "LLM_API_KEY" : "LLM_BASE_URL"],
+        message: "LLM_BASE_URL and LLM_API_KEY must be configured together",
+      });
+    }
+
+    const minioRequired = [
+      env.MINIO_ENDPOINT,
+      env.MINIO_ACCESS_KEY,
+      env.MINIO_SECRET_KEY,
+    ];
+    const configured = minioRequired.filter(Boolean).length;
+    if (configured > 0 && configured < minioRequired.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["MINIO_ENDPOINT"],
+        message:
+          "MINIO_ENDPOINT, MINIO_ACCESS_KEY, and MINIO_SECRET_KEY must be configured together",
+      });
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
 
-export function validateEnv(): Env {
-  return envSchema.parse(process.env);
+export function validateEnv(
+  environment: Record<string, string | undefined> = process.env,
+): Env {
+  return envSchema.parse(environment);
 }
