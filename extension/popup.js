@@ -1,0 +1,77 @@
+const statusEl = document.getElementById("status")
+const captureBtn = document.getElementById("capture")
+const optionsLink = document.getElementById("options")
+
+optionsLink.onclick = () => chrome.runtime.openOptionsPage()
+
+function setStatus(text, ok) {
+  statusEl.textContent = text
+  statusEl.style.color =
+    ok === false ? "#b00020" : ok === true ? "#047857" : "#333"
+}
+
+captureBtn.onclick = async () => {
+  const { appUrl, token } = await chrome.storage.local.get(["appUrl", "token"])
+  if (!appUrl || !token) {
+    setStatus(
+      "Buka Pengaturan dulu (klik tautan di bawah): isi App URL & Token.",
+      false,
+    )
+    return
+  }
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    setStatus("Tidak ada tab aktif.", false)
+    return
+  }
+
+  let html
+  let url
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => ({
+        html: document.documentElement.outerHTML,
+        url: location.href,
+      }),
+    })
+    html = res[0]?.result?.html
+    url = res[0]?.result?.url
+  } catch (e) {
+    setStatus("Gagal baca halaman: " + (e?.message || e), false)
+    return
+  }
+
+  if (!html || !url) {
+    setStatus("Halaman kosong atau URL tidak ditemukan.", false)
+    return
+  }
+
+  setStatus("Mengirim…")
+  try {
+    const r = await fetch(
+      appUrl.replace(/\/+$/, "") + "/api/scrape/ingest",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ url, html }),
+      },
+    )
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      setStatus("Error: " + (data.error || r.status), false)
+      return
+    }
+    setStatus(
+      `OK — ${data.saved} disimpan, ${data.skipped} dilewati.` +
+        (data.results?.[0]?.title ? "\n" + data.results[0].title : ""),
+      true,
+    )
+  } catch (e) {
+    setStatus("Gagal kirim: " + (e?.message || e), false)
+  }
+}
