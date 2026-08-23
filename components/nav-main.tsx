@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
+import Link from "next/link";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -15,23 +15,23 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
-import { ChevronRightIcon } from "lucide-react"
+} from "@/components/ui/sidebar";
+import { ChevronRightIcon } from "lucide-react";
 
 export function NavMain({
   items,
 }: {
   items: {
-    title: string
-    url: string
-    icon?: React.ReactNode
-    isActive?: boolean
-    disabled?: boolean
+    title: string;
+    url: string;
+    icon?: React.ReactNode;
+    isActive?: boolean;
+    disabled?: boolean;
     items?: {
-      title: string
-      url: string
-    }[]
-  }[]
+      title: string;
+      url: string;
+    }[];
+  }[];
 }) {
   return (
     <SidebarGroup>
@@ -47,18 +47,23 @@ export function NavMain({
             >
               <CollapsibleTrigger
                 render={
-                  <SidebarMenuButton tooltip={item.title} isActive={item.isActive} />
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={item.isActive}
+                  />
                 }
               >
                 {item.icon}
                 <span>{item.title}</span>
-                <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
+                <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90 motion-reduce:transition-none" />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
                   {item.items.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton render={<Link href={subItem.url} />}>
+                      <SidebarMenuSubButton
+                        render={<Link href={subItem.url} />}
+                      >
                         <span>{subItem.title}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
@@ -71,6 +76,7 @@ export function NavMain({
               <SidebarMenuButton
                 tooltip={item.title}
                 isActive={item.isActive}
+                aria-current={item.isActive ? "page" : undefined}
                 aria-disabled={item.disabled}
                 render={item.disabled ? <span /> : <Link href={item.url} />}
               >
@@ -78,9 +84,9 @@ export function NavMain({
                 <span>{item.title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          )
+          ),
         )}
       </SidebarMenu>
     </SidebarGroup>
-  )
+  );
 }

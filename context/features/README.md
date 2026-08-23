@@ -2,7 +2,8 @@
 
 Each numbered file defines one independently trackable product feature. `progress-tracker.md` is the index and status source.
 
-MVP specifications live directly in this directory. Post-MVP candidates live under `post-mvp/` and are indexed by `../roadmap.md`.
+MVP and promoted specifications live directly in this directory. Feature 12 is
+promoted and implemented; unpromoted candidates remain in `../roadmap.md`.
 
 ## Reading Rule
 
@@ -39,5 +40,11 @@ Allowed states:
 - `in progress`
 - `blocked`
 - `complete`
+- `needs remediation` (only while a delivered flow has unmet internal gates)
 
 A feature becomes `complete` only after code, tests, documentation, acceptance criteria, and required review pass.
+
+Current repository gates pass for Features 01-07 and 12. Feature 08 remains `in
+progress` only for live external/deployed verification; unit/integration gates
+must not be described as live Glints/Jobstreet, browser, Docker, MinIO, or email
+E2E evidence.

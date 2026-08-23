@@ -15,7 +15,7 @@ Bukan job portal baru, tapi aggregator + tracker + AI assistant di atas portal e
 ## Platform
 
 - Web app responsive (desktop + mobile browser)
-- PWA installable (Fase 3)
+- PWA installable is a post-MVP candidate and is not implemented
 - MVP: Chrome/Edge/Firefox modern
 - License: Private (MVP), Open Source dipertimbangkan post-MVP
 - Versioning: SemVer untuk app, Prisma migrations independent
@@ -28,7 +28,8 @@ Bukan job portal baru, tapi aggregator + tracker + AI assistant di atas portal e
 3. AI assist, bukan AI auto: scoring & suggestion, keputusan tetap user.
 4. Privacy: CV dan data lamaran milik user, tidak di-share.
 5. Modular parser: tiap sumber (Glints/Jobstreet) parser terpisah, mudah fix jika HTML berubah.
-6. Email reliable: Resend, tidak spammy, log terkontrol.
+6. Draft first: cover letter harus editable dan tersimpan. Email hanya diaktifkan
+   setelah provider, sender domain, ownership, dan anti-spam controls siap.
 7. Mobile usable: tracker bisa dicek dari HP.
 
 ## Core User Flow
@@ -36,10 +37,15 @@ Bukan job portal baru, tapi aggregator + tracker + AI assistant di atas portal e
 1. User register/login (NextAuth).
 2. Upload CV PDF → sistem parse → ekstrak skills, pengalaman, ringkasan → simpan sebagai Profile.
 3. User paste URL lowongan Glints/Jobstreet → sistem fetch & parse detail → simpan Job.
-4. User klik "Cek Kecocokan" → LLM hitung score 0-100 + matched/missing skills → simpan di Application.
-5. User buat Application (Wishlist → Applied → Screening → Interview → Offer/Rejected) dan bisa kirim email (Resend) dari app.
-6. Dashboard Kanban untuk drag status, notes, next follow-up, reminder email H+7.
-7. (Fase 3) Cron auto-cari lowongan berdasarkan skill profile dan tampilkan di "Rekomendasi Untukmu".
+4. User klik "Cek Kecocokan" -> LLM/heuristic hitung score 0-100 plus
+   matched/missing skills -> simpan di Match.
+5. User buat Application (Wishlist -> Applied -> Screening -> Interview ->
+   Offer/Rejected), mengatur follow-up, dan membuat draft cover letter.
+6. Tracker di `/tracker` untuk drag status, notes, next follow-up, dan dashboard reminder H+7.
+7. User menjalankan pencarian Glints/Jobstreet secara on-demand, meninjau hasil,
+   lalu memilih lowongan yang ingin disimpan sebagai rekomendasi.
+8. User dapat membaca detail lowongan dari DOM tab aktif melalui extension,
+   meninjau preview lokal, lalu direct-save eksplisit dengan koneksi PKCE scoped.
 
 ## MVP Features
 
@@ -50,9 +56,10 @@ Spec di `context/features/` adalah source of truth.
 3. Job Fetch via Paste URL (Glints & Jobstreet)
 4. Application Tracker (Kanban, status, notes)
 5. AI Matching Score (CV vs JD)
-6. Email Integration (Resend) + Cover Letter Generator
+6. Cover Letter Generator (email via Resend masih deferred)
 7. Dashboard & Analytics
-8. Cron Scraper + Rekomendasi (Fase 3, tidak blocking MVP)
+8. On-demand Job Search & Recommendations
+12. Extension-Native Job Capture (promoted)
 
 ## Out Of Scope (MVP)
 
@@ -60,7 +67,7 @@ Spec di `context/features/` adalah source of truth.
 - Auto-apply bot yang login ke Glints/Jobstreet
 - Native mobile app
 - Sumber selain Glints/Jobstreet (LinkedIn, Kalibrr, etc. → post-MVP)
-- Real-time chat/notification selain email
+- Real-time chat/notification dan background cron scraper
 
 ## Success Criteria
 
@@ -68,5 +75,13 @@ Spec di `context/features/` adalah source of truth.
 - User bisa paste URL Glints/Jobstreet dan dapat detail lowongan terstruktur.
 - Matching score konsisten dan tersimpan (cache).
 - Kanban tracker drag-drop lancar di desktop & mobile.
-- Email terkirim via Resend tanpa masuk spam (SPF/DKIM ok).
-- yarn build & yarn test pass, tidak ada hardcoded color/token violation.
+- Cover letter bisa dibuat, diedit, dan disimpan; email baru menjadi gate setelah
+  OD-003 dipromosikan kembali ke scope aktif.
+- `yarn lint`, `yarn typecheck`, `yarn test`, dan `yarn build` pass; tidak ada
+  hardcoded color/token violation.
+
+## Implementation Snapshot
+
+Status implementasi, verified gates, remediation, dan residual/external gaps
+dicatat di `implementation-audit.md`. Feature specs tetap menjadi source of truth
+untuk scope yang disepakati.

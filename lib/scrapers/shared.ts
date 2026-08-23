@@ -333,13 +333,19 @@ export function ldToFields(ld: Record<string, unknown>): ParsedFields {
 }
 
 export function metaFields($: CheerioAPI): ParsedFields {
+  // Title/company/description fall back to meta tags as a last resort. Real
+  // detail pages override these from the DOM via their per-site parser (e.g.
+  // Glints' right-hand detail panel), so Glints' site-level promo in
+  // `og:description` ("Discover Careers Discover You…") is replaced by the real
+  // job description on actual pages. Jobstreet pages with no DOM employer/desc
+  // info keep the platform name / og:description as a reasonable fallback.
   const title =
     str($('meta[property="og:title"]').attr("content")) ||
     str($("title").first().text())
+  const company = str($('meta[property="og:site_name"]').attr("content"))
   const description =
     str($('meta[property="og:description"]').attr("content")) ||
     str($('meta[name="description"]').attr("content"))
-  const company = str($('meta[property="og:site_name"]').attr("content"))
   return { title, company, description }
 }
 

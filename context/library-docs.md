@@ -15,27 +15,30 @@ Records approved deps. Not substitute for official docs.
 |---|---|---|
 | Framework | Next.js 16 App Router | SSR + API routes |
 | Language | TypeScript strict | |
-| DB | Prisma 7 + Postgres (Supabase) | SQLite fallback dev; requires `@prisma/adapter-pg` driver adapter (Prisma 7 client has no bundled engine) |
+| DB | Prisma 7.9 + PostgreSQL + `@prisma/adapter-pg` | PostgreSQL only; external DB via `DATABASE_URL`; no SQLite fallback |
 | Auth | NextAuth v5 (Auth.js) Credentials (email+password), JWT sessions | No PrismaAdapter (decision OD-005); Google/Email deferred |
-| Styling | Tailwind v4 + shadcn/ui | Tokens only |
+| Styling | Tailwind v4 + shadcn `base-nova` + Base UI | CSS-first config, tokens only, next-themes |
 | Validation | Zod 3 | Env + request |
 | CV Parse | pdf-parse 1.1.1 | PDF text extract (dynamic `import()` in Node runtime route) |
 | Object Storage | minio 8.x | CV PDF blobs (S3-compatible, user-run MinIO); local-disk fallback when unset |
-| Scraper MVP | cheerio 1.x | HTML parse |
-| Scraper render | playwright 1.x (local Chromium) | Paste-URL fetch: native fetch dulu, fallback ke local headless browser bila 403/Cloudflare (Browserbase ditolak, tidak tersedia di Indonesia) |
-| Scraper Fase 3 | playwright 1.x | On-demand headless render (search page) via `POST /api/jobs/search` — bukan cron |
-| Deploy | Docker + Compose | `Dockerfile` + `docker-compose.yml` (`web` Traefik + `dev` hot reload), tanpa container Postgres (DB eksternal). Image install Chromium via `playwright install --with-deps`. Tidak ada service cron. |
-| AI | OpenAI-compatible LLM (provider-agnostic) | DeepSeek/Groq/Ollama/OpenRouter via `LLM_BASE_URL`; NOT OpenAI/Gemini; heuristic fallback if no key |
-| Email | resend 4.x | + nodemailer fallback |
+| Scraper parse | cheerio 1.x | Pure JSON-LD/DOM parsing after HTML retrieval; does not execute pages |
+| Scraper render | playwright 1.x (local Chromium) | Fallback only after pinned native fetch fails/is blocked; exact-host DNS pin and same-origin resource policy. Browserbase rejected |
+| On-demand search renderer | playwright 1.x | Headless render via `POST /api/jobs/search`; no scheduler/cron |
+| Extension | Chrome/Edge Manifest V3, no npm runtime | `activeTab`, `scripting`, `storage`, `identity`; DOM preview, PKCE direct-save, external install handshake, generated ZIP |
+| Deploy | Docker + Compose | Node 24, automatic migrations, non-root runtime, healthcheck, persistent local-upload volume, external Traefik/Postgres/optional MinIO; no cron |
+| AI | OpenAI-compatible HTTP API (provider-agnostic) | Direct `fetch` ke `/chat/completions` via `LLM_BASE_URL`; no provider SDK; heuristic fallback |
+| Email | Deferred, no package installed | `EmailLog` schema dan env placeholder ada; Resend/Nodemailer belum diimplementasikan |
 | Kanban | @dnd-kit/core + sortable | Drag drop |
 | Icons | lucide-react | |
 
 ## Selection Constraints
 
-- Scraper: pure cheerio, no puppeteer in MVP.
+- Scraper: Cheerio parses HTML; Playwright is a bounded browser fallback, not the parser.
 - AI: temperature low (0.2), JSON mode, truncation.
 - Email: verified domain, plain template first.
 - pdf-parse: handle encrypted/locked PDF gracefully.
+- Runtime/package manager: package engine `>=24 <25`, Node 24 in Docker/CI,
+  Yarn 1.22.22. Next instrumentation performs Node-runtime env validation.
 
 ## Pending Template
 

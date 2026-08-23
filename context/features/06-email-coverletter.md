@@ -1,28 +1,51 @@
-# Feature 06: Email & Cover Letter
+# Feature 06: Cover Letter Generation
 
 ## Goal
-Semi-auto: generate cover letter + kirim email via Resend.
+
+Generate draft cover letter dari Profile + Job, lalu biarkan user mengedit dan
+menyimpannya pada Application.
 
 ## Status
-- Cover-letter generation: DONE (AI + heuristic fallback, editable, saved to `Application.coverLetter`, UI di Kanban EditSheet).
-- Email send via Resend: DEFERRED (pending OD-003 domain/key). Scope reduced by user to generation only for now.
 
+Delivered scope complete. Email sending was removed from this feature and is
+deferred under OD-003; Resend/Nodemailer are not installed.
 
 ## User Outcome
-Dari Application: Generate Cover Letter (AI) -> edit -> Send Email -> EmailLog.
+
+Dari edit Application, user bisa generate cover letter formal Bahasa Indonesia,
+edit draft, copy, regenerate, dan menyimpan hasilnya.
 
 ## In Scope
-- AI cover letter: POST /api/ai/cover-letter {profileId,jobId}
-- POST /api/email/send (ownership + rate limit, Resend), EmailLog
-- Template plain, domain verified
+
+- `POST /api/ai/cover-letter {applicationId}` with ownership check
+- OpenAI-compatible generation with heuristic formal fallback
+- Separate process-local 10/min rate-limit key for cover-letter generation
+- Persist draft in `Application.coverLetter`
+- Editable dialog in tracker
 
 ## Out Of Scope
-- Auto-login ke portal pihak ketiga
+
+- Email sending, recipient validation, Resend, and EmailLog writes
+- Auto-login or auto-apply to third-party portals
 
 ## Acceptance Criteria
-- [ ] Generate menghasilkan draft editable
-- [ ] Send sukses -> log terbuat, tampil di UI
-- [ ] Non-owner tidak bisa send untuk app orang lain
+
+- [x] Generate menghasilkan draft editable
+- [x] Draft bisa regenerate, copy, dan disimpan ke Application
+- [x] Non-owner tidak bisa generate untuk Application orang lain
+- [x] Tanpa LLM atau saat LLM error, heuristic fallback tetap menghasilkan draft
+- [x] LLM response is timeout-bounded and strict-schema parsed; UI exposes
+  loading/error/edit/copy/save states
+
+## Deferred Email Scope
+
+Jika OD-003 diselesaikan, email harus menjadi feature/spec terpisah dengan
+ownership, recipient policy, anti-spam rate limit, provider failure handling,
+plain/sanitized template, dan EmailLog acceptance tests.
+
+Prompt injection remains an honest residual because Profile/Job text is
+untrusted. The draft is never sent automatically and must be reviewed by user.
 
 ## Dependencies
+
 - 01, 02, 03, 04, 05

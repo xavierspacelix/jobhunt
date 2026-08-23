@@ -1,12 +1,81 @@
-import type { Job, Profile } from "@/lib/generated/prisma/client"
-import { callChatJson } from "./llm"
+import { createHash } from "node:crypto";
+import type { Job, Profile } from "@/lib/generated/prisma/client";
+import { z } from "zod";
+import { callChatJson } from "./llm";
 
 export type MatchResult = {
-  score: number
-  matchedSkills: string[]
-  missingSkills: string[]
-  source: "ai" | "heuristic"
-  cached?: boolean
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  source: "ai" | "heuristic";
+  cached?: boolean;
+};
+
+const matchLlmSchema = z
+  .object({
+    score: z.number().int().min(0).max(100),
+    matchedSkills: z.array(z.string().trim().min(1)),
+    missingSkills: z.array(z.string().trim().min(1)),
+    rationale: z.string(),
+  })
+  .strict();
+
+const MATCH_PROMPT_VERSION = "v4";
+const MATCH_DESCRIPTION_LIMIT = 12_000;
+
+export function parseMatchLlmOutput(value: unknown): MatchResult {
+  const parsed = matchLlmSchema.parse(value);
+  return {
+    score: parsed.score,
+    matchedSkills: parsed.matchedSkills,
+    missingSkills: parsed.missingSkills,
+    source: "ai",
+  };
+}
+
+function stableJson(value: unknown): string {
+  if (value instanceof Date) return JSON.stringify(value.toISOString());
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+export function jobContentRevision(job: Job): string {
+  const content = {
+    title: job.title,
+    company: job.company,
+    location: job.location,
+    salary: job.salary,
+    source: job.source,
+    sourceUrl: job.sourceUrl,
+    description: job.description,
+    postedAt: job.postedAt,
+    employmentType: job.employmentType,
+    experience: job.experience,
+    education: job.education,
+    category: job.category,
+    recruiter: job.recruiter,
+    skills: job.skills,
+    externalJobId: job.externalJobId,
+    shareToken: job.shareToken,
+    companyRefId: job.companyRefId,
+    companyDetails: job.companyDetails,
+  };
+  return createHash("sha256").update(stableJson(content)).digest("hex");
+}
+
+export function createMatchCacheKey(profile: Profile, job: Job): string {
+  return createHash("sha256")
+    .update(
+      `${profile.id}|${profile.updatedAt.toISOString()}|${job.id}|${jobContentRevision(job)}|${MATCH_PROMPT_VERSION}`,
+    )
+    .digest("hex");
 }
 
 // Canonical aliases so variants collapse to one key, e.g.
@@ -25,41 +94,41 @@ const SKILL_CANON: Record<string, string> = {
   "restful api": "rest api",
   "restfull api": "rest api",
   "rest api": "rest api",
-  "restful": "rest",
+  restful: "rest",
   "pemrograman javascript": "javascript",
-  "javascript": "javascript",
-  "js": "javascript",
-  "react": "react",
-  "reactjs": "react",
-  "vue": "vue",
-  "vuejs": "vue",
-  "angular": "angular",
-  "next": "next",
-  "nextjs": "next",
-  "node": "node",
-  "nodejs": "node",
-  "express": "express",
-  "microservice": "microservices",
-}
+  javascript: "javascript",
+  js: "javascript",
+  react: "react",
+  reactjs: "react",
+  vue: "vue",
+  vuejs: "vue",
+  angular: "angular",
+  next: "next",
+  nextjs: "next",
+  node: "node",
+  nodejs: "node",
+  express: "express",
+  microservice: "microservices",
+};
 
 function normalizeSkill(s: string): string {
-  let t = s.trim().toLowerCase()
-  t = t.replace(/\.(js|ts|jsx|tsx)$/i, "")
-  t = t.replace(/^pemrograman\s+/i, "")
-  t = t.replace(/\s+/g, " ")
-  return SKILL_CANON[t] ?? t
+  let t = s.trim().toLowerCase();
+  t = t.replace(/\.(js|ts|jsx|tsx)$/i, "");
+  t = t.replace(/^pemrograman\s+/i, "");
+  t = t.replace(/\s+/g, " ");
+  return SKILL_CANON[t] ?? t;
 }
 
 function norm(s: string): string {
-  return s.trim().toLowerCase()
+  return s.trim().toLowerCase();
 }
 
 function collectExperienceText(exp: unknown): string[] {
-  const out: string[] = []
-  const arr = Array.isArray(exp) ? exp : []
+  const out: string[] = [];
+  const arr = Array.isArray(exp) ? exp : [];
   for (const item of arr) {
-    if (!item || typeof item !== "object") continue
-    const o = item as Record<string, unknown>
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
     for (const key of [
       "role",
       "title",
@@ -70,10 +139,10 @@ function collectExperienceText(exp: unknown): string[] {
       "responsibilities",
       "highlights",
     ]) {
-      if (typeof o[key] === "string") out.push(o[key] as string)
+      if (typeof o[key] === "string") out.push(o[key] as string);
     }
   }
-  return out
+  return out;
 }
 
 function profileContext(profile: Profile): string {
@@ -82,59 +151,61 @@ function profileContext(profile: Profile): string {
     ...collectExperienceText(profile.experience),
     profile.headline ?? "",
     profile.summary ?? "",
-  ]
-  return parts.filter(Boolean).join("\n")
+  ];
+  return parts.filter(Boolean).join("\n");
 }
 
 // Extract canonical skill keys from free text using word-boundary matching,
 // so e.g. "node.js" in an experience description counts without false hits
 // like "json" matching the "js" key.
 function canonFromText(text: string): string[] {
-  const lower = text.toLowerCase()
-  const out: string[] = []
+  const lower = text.toLowerCase();
+  const out: string[] = [];
   for (const key of Object.keys(SKILL_CANON)) {
-    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    const re = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i")
-    if (re.test(lower)) out.push(SKILL_CANON[key])
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i");
+    if (re.test(lower)) out.push(SKILL_CANON[key]);
   }
-  return out
+  return out;
 }
 
 function clampScore(n: number): number {
-  if (!Number.isFinite(n)) return 0
-  return Math.max(0, Math.min(100, Math.round(n)))
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
 }
 
 export function heuristicMatch(profile: Profile, job: Job): MatchResult {
-  const profCanon = new Set<string>()
-  for (const s of profile.skills ?? []) profCanon.add(normalizeSkill(s))
+  const profCanon = new Set<string>();
+  for (const s of profile.skills ?? []) profCanon.add(normalizeSkill(s));
   for (const t of collectExperienceText(profile.experience)) {
-    profCanon.add(normalizeSkill(t))
+    profCanon.add(normalizeSkill(t));
   }
   for (const c of canonFromText(profileContext(profile))) {
-    profCanon.add(c)
+    profCanon.add(c);
   }
-  const jobMap = new Map<string, string>()
+  const jobMap = new Map<string, string>();
   for (const s of job.skills ?? []) {
-    const c = normalizeSkill(s)
-    if (!jobMap.has(c)) jobMap.set(c, s)
+    const c = normalizeSkill(s);
+    if (!jobMap.has(c)) jobMap.set(c, s);
   }
 
-  const matched: string[] = []
-  const missing: string[] = []
+  const matched: string[] = [];
+  const missing: string[] = [];
   for (const [canon, original] of jobMap) {
-    if (profCanon.has(canon)) matched.push(original)
-    else missing.push(original)
+    if (profCanon.has(canon)) matched.push(original);
+    else missing.push(original);
   }
 
-  let score: number
+  let score: number;
   if (jobMap.size > 0) {
-    score = (matched.length / jobMap.size) * 100
+    score = (matched.length / jobMap.size) * 100;
   } else {
-    const desc = (job.description ?? "").toLowerCase()
-    const found = (profile.skills ?? []).map(norm).filter((s) => desc.includes(s))
-    const denom = Math.max((profile.skills ?? []).length, 1)
-    score = (found.length / denom) * 100
+    const desc = (job.description ?? "").toLowerCase();
+    const found = (profile.skills ?? [])
+      .map(norm)
+      .filter((s) => desc.includes(s));
+    const denom = Math.max((profile.skills ?? []).length, 1);
+    score = (found.length / denom) * 100;
   }
 
   return {
@@ -142,10 +213,13 @@ export function heuristicMatch(profile: Profile, job: Job): MatchResult {
     matchedSkills: matched,
     missingSkills: missing,
     source: "heuristic",
-  }
+  };
 }
 
-export async function llmMatch(profile: Profile, job: Job): Promise<MatchResult> {
+export async function llmMatch(
+  profile: Profile,
+  job: Job,
+): Promise<MatchResult> {
   const system =
     "You are a strict but fair recruitment matching engine. Respond with STRICT JSON only, no prose. " +
     "Consider the candidate's FULL profile: listed skills, work experience, and summary. " +
@@ -154,7 +228,7 @@ export async function llmMatch(profile: Profile, job: Job): Promise<MatchResult>
     "2) Do NOT assume one technology implies another (React does NOT imply Node.js; JavaScript knowledge does NOT imply Express.js). " +
     "3) DO credit demonstrated adjacent experience: e.g., several years as a Backend/Fullstack Developer using JavaScript is evidence of Node.js familiarity and deserves PARTIAL credit, not zero. " +
     "4) Weight required/hard tech-stack items heavily: a missing required stack item must substantially lower the score UNLESS the candidate's experience strongly demonstrates equivalent capability. " +
-    "5) A score of 100 means the candidate meets essentially all stated requirements."
+    "5) A score of 100 means the candidate meets essentially all stated requirements.";
   const user = `Return JSON with this exact shape:
 {
   "score": number (integer 0-100),
@@ -168,7 +242,7 @@ Candidate profile:
 - Summary: ${profile.summary ?? ""}
 - Skills: ${(profile.skills ?? []).join(", ")}
 - Work experience:
-${(collectExperienceText(profile.experience).join("\n") || "(none provided)")}
+${collectExperienceText(profile.experience).join("\n") || "(none provided)"}
 
 Job:
 - Title: ${job.title}
@@ -176,21 +250,8 @@ Job:
 - Experience: ${job.experience ?? ""}
 - Education: ${job.education ?? ""}
 - Skills: ${(job.skills ?? []).join(", ")}
-- Description: ${job.description ?? ""}`
-  const parsed = (await callChatJson(system, user)) as {
-    score?: unknown
-    matchedSkills?: unknown
-    missingSkills?: unknown
-  }
-  const toArr = (v: unknown) =>
-    Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : []
-
-  return {
-    score: clampScore(Number(parsed.score)),
-    matchedSkills: toArr(parsed.matchedSkills),
-    missingSkills: toArr(parsed.missingSkills),
-    source: "ai",
-  }
+- Description: ${(job.description ?? "").slice(0, MATCH_DESCRIPTION_LIMIT)}`;
+  return parseMatchLlmOutput(await callChatJson(system, user));
 }
 
 export async function scoreMatch(
@@ -199,10 +260,11 @@ export async function scoreMatch(
 ): Promise<MatchResult> {
   if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
     try {
-      return await llmMatch(profile, job)
+      return await llmMatch(profile, job);
     } catch (err) {
-      console.error("[match] LLM scoring failed, falling back to heuristic", err)
+      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      console.error(`[match] LLM scoring failed, falling back to heuristic: ${detail}`);
     }
   }
-  return heuristicMatch(profile, job)
+  return heuristicMatch(profile, job);
 }

@@ -1,21 +1,29 @@
-import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
-import { callChatJson } from "@/lib/llm"
-import { profileKeywords } from "@/lib/job-search"
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { callChatJson } from "@/lib/llm";
+import { profileKeywords } from "@/lib/job-search";
+import { parseKeywordRecommendation } from "@/lib/recommend-keywords";
+import { recommendKeywordsRateLimit } from "@/lib/rate-limit";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
 interface ExperienceEntry {
-  role?: string
-  company?: string
-  period?: string
+  role?: string;
+  company?: string;
+  period?: string;
 }
 
 export const POST = auth(async (req) => {
-  const email = req.auth?.user?.email
+  const email = req.auth?.user?.email;
   if (!email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!recommendKeywordsRateLimit(email)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan rekomendasi, coba lagi nanti." },
+      { status: 429 },
+    );
   }
 
   const user = await prisma.user.findUnique({
@@ -30,30 +38,30 @@ export const POST = auth(async (req) => {
         },
       },
     },
-  })
+  });
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const profile = user.profile
+  const profile = user.profile;
   if (!profile) {
     return NextResponse.json(
       { error: "Lengkapi profil atau unggah CV dahulu." },
       { status: 400 },
-    )
+    );
   }
 
-  let keywords: string[] = []
-  let summary = ""
+  let keywords: string[] = [];
+  let summary = "";
   if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
     try {
       const system =
-        "You are a career recommendation assistant for job seekers in Indonesia. Respond with STRICT JSON only, no prose."
+        "You are a career recommendation assistant for job seekers in Indonesia. Respond with STRICT JSON only, no prose.";
       const experienceText = Array.isArray(profile.experience)
         ? (profile.experience as ExperienceEntry[])
             .map((e) => e.role)
             .filter(Boolean)
             .join(", ")
-        : ""
+        : "";
       const userPrompt = `Berdasarkan SELURUH profil kandidat (bukan hanya skill), usulkan maksimal 10 kata kunci pencarian lowongan (peran, skill, lokasi, atau tipe kerja seperti Remote) yang memaksimalkan kecocokan, serta ringkasan singkat (1-2 kalimat) dalam Bahasa Indonesia yang menjelaskan rekomendasinya.
 Pertimbangkan headline, ringkasan, skill, DAN pengalaman kerja (termasuk peran lampau) untuk menangkap minat dan arah karier kandidat.
 Kembalikan JSON dengan bentuk persis:
@@ -65,28 +73,22 @@ Profil:
 - Skills: ${(profile.skills ?? []).join(", ")}
 - Pengalaman: ${experienceText || "(kosong)"}
 
-Gunakan kata kunci seperti lazim di job board (Glints/Jobstreet), mis. "Frontend Developer", "React", "Jakarta", "Remote".`
+Gunakan kata kunci seperti lazim di job board (Glints/Jobstreet), mis. "Frontend Developer", "React", "Jakarta", "Remote".`;
 
-      const parsed = (await callChatJson(system, userPrompt)) as {
-        keywords?: unknown
-        summary?: unknown
-      }
-      if (Array.isArray(parsed.keywords)) {
-        keywords = parsed.keywords
-          .map((k) => String(k).trim())
-          .filter(Boolean)
-          .slice(0, 10)
-      }
-      if (typeof parsed.summary === "string") summary = parsed.summary.trim()
+      const parsed = parseKeywordRecommendation(
+        await callChatJson(system, userPrompt),
+      );
+      keywords = parsed.keywords;
+      summary = parsed.summary;
     } catch (err) {
-      console.error("[recommend-keywords] LLM gagal:", err)
+      console.error("[recommend-keywords] LLM gagal:", err);
     }
   }
 
   if (keywords.length === 0) {
-    keywords = profileKeywords(profile)
-    summary = `Rekomendasi dari profil Anda (skill, headline, & pengalaman): ${keywords.join(", ")}.`
+    keywords = profileKeywords(profile);
+    summary = `Rekomendasi dari profil Anda (skill, headline, & pengalaman): ${keywords.join(", ")}.`;
   }
 
-  return NextResponse.json({ keywords, summary })
-})
+  return NextResponse.json({ keywords, summary });
+});

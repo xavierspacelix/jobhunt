@@ -15,9 +15,15 @@ import { SparklesIcon } from "lucide-react"
 export function MatchDialog({
   jobId,
   trigger,
+  onComplete,
 }: {
   jobId: string
   trigger?: React.ReactElement
+  onComplete?: (result: {
+    score: number
+    matchedSkills: string[]
+    missingSkills: string[]
+  }) => void
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -39,7 +45,7 @@ export function MatchDialog({
           Skor kecocokan profil CV dengan lowongan ini.
         </DialogDescription>
         <div className="mt-4">
-          <MatchPanel jobId={jobId} autoRun={open} />
+          <MatchPanel jobId={jobId} autoRun={open} onComplete={onComplete} />
         </div>
       </DialogContent>
     </Dialog>

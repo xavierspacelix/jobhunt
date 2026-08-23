@@ -1,58 +1,76 @@
 # Feature 08: On-demand Job Search & Recommendations
 
-Status: in progress (reimplemented without cron — on-demand from Lowongan page)
+Status: in progress (implementation complete; live environment verification pending)
 
 ## Goal
 
-User mengetik kata kunci → sistem cari di Glints & Jobstreet → simpan hasil ke
-tab "Rekomendasi Untukmu". Berjalan **on-demand** saat user men-trigger dari UI,
-bukan cron background.
+User menjalankan pencarian Glints/Jobstreet dari `/jobs`, meninjau scored result
+previews, lalu secara eksplisit memilih hasil yang ingin disimpan.
 
 ## User Outcome
 
-Section "Cari Lowongan" di `/jobs` dengan input kata kunci (bisa lebih dari
-skill profil — mis. "React, Jakarta, Remote"). Saat mencari, user melihat
-**proses nyata** (bukan spinner doang): "Mencari di Glints…", "34 lowongan
-ditemukan", "Mengambil detail 12/20", "Disimpan: …", "Selesai — N disimpan".
+Tab `Cari (Scrape)` menyediakan keyword dan lokasi, saran keyword dari profil,
+progress pencarian live, hasil dengan match score/skills, detail, dan tombol
+simpan. Hasil yang disimpan muncul di tab `Tersimpan` dengan provenance manual,
+search, atau both.
 
 ## In Scope
 
-- Section tersendiri di `/jobs` (`JobFetcher`): input kata kunci + panel progres
-  live + hitungan tersimpan. Prefill dari `Profile.skills`.
-- API `POST /api/jobs/search` (auth, `runtime=nodejs`, SSE `text/event-stream`):
-  stream event `{type: start|search|links|detail|saved|done|error}`.
-- Pipeline `lib/job-search.ts` (refactor dari cron lama, tanpa scheduler):
-  - Keyword = input user (top 10, bukan cuma 5 skill profil).
-  - Search Glints (`/id/opportunities/jobs/explore?keyword=`) + Jobstreet
-    (`/en/job-search?key=`) via `buildSearchUrls`.
-  - Parse search-result links → fetch detail (reuse `parseGlints`/`parseJobstreet`)
-    → upsert `Job` (by sourceUrl) + buat `Recommendation` per user.
-  - Batch 20 per run; 429 exponential backoff (base 5s, 3 retry); `MIN_INTERVAL_MS=1500`.
-  - Fallback render: `fetchRenderedHtml` (native → Playwright bila 403/Cloudflare).
-- UI tab "Rekomendasi Untukmu" via `GET /api/jobs/recommended` (sudah ada,
-  sekarang terisi oleh pencarian on-demand).
-- Docker: `Dockerfile` + `docker-compose.yml` (`web` + `dev`, Traefik). **Tidak ada
-  service cron.** Job search on-demand dari UI.
+- UI dalam `JobFetcher`: tab Tersimpan, Input Manual (Link), dan Cari (Scrape).
+- `POST /api/jobs/recommend-keywords` menghasilkan sampai 10 saran dari profil
+  via LLM atau heuristic fallback.
+- `POST /api/jobs/search` (auth, Node runtime, max duration 300s) streams SSE:
+  `start|search|links|detail|result|done|error`.
+- Input menerima sampai 10 normalized keywords; source search URL saat ini
+  menggunakan lima keyword pertama per source.
+- Search Glints lalu Jobstreet, deduplicate link, cap batch 20, interval 1.5s.
+- Native fetch + Playwright fallback; retry 429 dengan delay 5/10/20 detik.
+- Filter closed job, maximum age 30 hari, dan best-effort location matching.
+- Parse detail dengan parser Feature 03, score candidate concurrency 4, lalu
+  stream preview. Search tidak menulis database.
+- Setiap result membawa preview HMAC 15 menit yang terikat user.
+- `POST /api/jobs/recommendations` hanya menerima preview valid, lalu upsert
+  SHARED Job, SavedJob SEARCH, Recommendation, dan optional Match.
+- `GET /api/jobs` hanya mengembalikan Job yang memiliki relasi user aktif dan
+  memberi origin manual/auto/both. Tidak ada `GET /api/jobs/recommended`.
+- Docker/Compose tetap tanpa scheduler atau cron service.
 
 ## Out Of Scope
 
-- Cron / scheduler background (dibatalkan per keputusan user).
-- Auto-apply bot; MVP blocking lainnya.
+- Background cron/scheduler
+- Automatic save semua search results
+- Auto-apply bot
+
+## Behavior and Safety
+
+- Search harus dipicu user dan memberikan progress nyata.
+- User memilih sendiri hasil yang disimpan; preview sementara hilang saat reload.
+- Source-level fetch failures are reported and the next source can continue.
+  Unexpected detail-parser or scoring exceptions currently bubble to the
+  route-level `error` event and can stop the run.
+- Shared canonical tidak dapat ditulis dari payload client unsigned. Unsaved Job
+  tidak menghapus canonical atau data user lain.
 
 ## Acceptance Criteria
 
-- [x] Section "Cari Lowongan" ada di `/jobs` dengan input kata kunci
-- [x] Progres pencarian ditampilkan live (bukan loading state saja)
-- [x] Keyword fleksibel (bukan cuma skill profil)
-- [x] Hasil masuk ke tab "Rekomendasi Untukmu"
-- [x] Batch 20 + 429 backoff
-- [x] Tanpa service cron di compose
+- [x] Tab Cari (Scrape) tersedia di `/jobs`
+- [x] Keyword dan lokasi dapat diedit; profile suggestions tersedia
+- [x] Progres dan candidate results ditampilkan live via SSE
+- [x] Batch 20, interval 1.5s, dan 429 backoff diterapkan
+- [x] User dapat membuka detail dan menyimpan candidate tertentu
+- [x] Saved candidate membuat Job + Recommendation dan muncul di Tersimpan
+- [x] Tidak ada cron route/script/service
+- [x] Unit tests search/job normalization lulus
+- [x] Preview signing, provenance, user visibility, and DB ownership integration
+  controls pass automated tests
+- [ ] Live E2E lulus pada deploy dengan DB dan akses Glints/Jobstreet nyata
 
 ## Dependencies
 
-- 01, 02, 03
+- 01, 02, 03, 05
 
 ## Decisions
 
-- Cron dibatalkan (OD-010 kini superseded) — pencarian on-demand dari UI.
-- Lihat `library-docs.md` (tidak ada lagi Cron scheduler).
+- OD-010 superseded: user-triggered on-demand search replaces cron.
+- Explicit preview-and-save is canonical; automatic recommendation ingestion is
+  not implemented.

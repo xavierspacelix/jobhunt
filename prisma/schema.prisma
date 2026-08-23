@@ -15,6 +15,22 @@ enum JobSource {
   JOBSTREET
 }
 
+enum JobScope {
+  SHARED
+  PRIVATE
+}
+
+enum SavedJobOrigin {
+  MANUAL
+  SEARCH
+  EXTENSION
+}
+
+enum ExtensionScope {
+  EXTENSION_JOBS_WRITE   @map("extension:jobs:write")
+  EXTENSION_ACCOUNT_READ @map("extension:account:read")
+}
+
 enum ApplicationStatus {
   WISHLIST
   APPLIED
@@ -25,86 +41,147 @@ enum ApplicationStatus {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String    @unique
+  emailVerified         DateTime?
+  image                 String?
+  passwordHash          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  extensionDownloadedAt DateTime?
 
-  profile      Profile?
-  applications Application[]
-  matches      Match[]
-  recommendations Recommendation[]
+  profile              Profile?
+  applications         Application[]
+  matches              Match[]
+  recommendations      Recommendation[]
+  savedJobs            SavedJob[]
+  ownedJobs            Job[]
+  extensionConnections ExtensionConnection[]
+  extensionAuthCodes   ExtensionAuthCode[]
+}
+
+model ExtensionConnection {
+  id             String           @id @default(cuid())
+  userId         String
+  installationId String
+  tokenHash      String           @unique
+  extensionId    String
+  scopes         ExtensionScope[] @default([EXTENSION_JOBS_WRITE, EXTENSION_ACCOUNT_READ])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  expiresAt      DateTime
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, installationId])
+  @@index([userId, revokedAt])
+}
+
+model ExtensionAuthCode {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  codeHash       String   @unique
+  redirectUri    String
+  installationId String
+  codeChallenge  String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId, expiresAt])
 }
 
 model Profile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  rawText   String?
-  fullName  String?
-  headline  String?
-  location  String?
-  email     String?
-  phone     String?
-  skills    String[]
-  summary   String?
-  experience Json?
-  education   Json?
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  rawText        String?
+  fullName       String?
+  headline       String?
+  location       String?
+  email          String?
+  phone          String?
+  skills         String[]
+  summary        String?
+  experience     Json?
+  education      Json?
   certifications Json?
-  links    Json?
-  cvKey      String?
-  parsedWith String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  links          Json?
+  cvKey          String?
+  parsedWith     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Job {
-  id              String     @id @default(cuid())
-  title           String
-  company         String
-  location        String?
-  salary          String?
-  source          JobSource
-  sourceUrl       String     @unique
-  description     String?
-  postedAt        DateTime?
-  employmentType  String?
-  experience      String?
-  education       String?
-  category        String?
-  recruiter       String?
-  skills          String[]
-  externalJobId   String?
-  shareToken      String?
-  companyRefId    String?
-  companyDetails  Json?
-  createdAt       DateTime   @default(now())
+  id             String    @id @default(cuid())
+  scope          JobScope  @default(SHARED)
+  ownerId        String?
+  dedupeKey      String    @unique
+  title          String
+  company        String
+  location       String?
+  salary         String?
+  source         JobSource
+  sourceUrl      String
+  description    String?
+  postedAt       DateTime?
+  employmentType String?
+  experience     String?
+  education      String?
+  category       String?
+  recruiter      String?
+  skills         String[]
+  externalJobId  String?
+  shareToken     String?
+  companyRefId   String?
+  companyDetails Json?
+  createdAt      DateTime  @default(now())
 
-  applications Application[]
-  matches      Match[]
+  owner           User?            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  applications    Application[]
+  matches         Match[]
   recommendations Recommendation[]
+  savedBy         SavedJob[]
+
+  @@index([scope, ownerId])
+  @@index([sourceUrl])
+}
+
+model SavedJob {
+  id        String         @id @default(cuid())
+  userId    String
+  jobId     String
+  origin    SavedJobOrigin
+  createdAt DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
 }
 
 model Application {
-  id              String            @id @default(cuid())
-  userId          String
-  jobId           String
-  status          ApplicationStatus @default(WISHLIST)
-  matchScore      Int?
-  matchedSkills   String[]
-  missingSkills   String[]
-  matchCacheKey   String?
-  coverLetter     String?
-  notes           String?
-  appliedAt       DateTime?
-  nextFollowUpAt  DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  userId         String
+  jobId          String
+  status         ApplicationStatus @default(WISHLIST)
+  matchScore     Int?
+  matchedSkills  String[]
+  missingSkills  String[]
+  matchCacheKey  String?
+  coverLetter    String?
+  notes          String?
+  appliedAt      DateTime?
+  nextFollowUpAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -115,16 +192,16 @@ model Application {
 }
 
 model Match {
-  id             String   @id @default(cuid())
-  userId         String
-  jobId          String
-  score          Int
-  matchedSkills  String[]
-  missingSkills  String[]
-  source         String?
-  cacheKey       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  jobId         String
+  score         Int
+  matchedSkills String[]
+  missingSkills String[]
+  source        String?
+  cacheKey      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)

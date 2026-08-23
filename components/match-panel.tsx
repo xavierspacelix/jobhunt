@@ -1,76 +1,79 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Loader2Icon } from "lucide-react"
+import * as React from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Loader2Icon } from "lucide-react";
 
 type MatchResponse = {
-  score: number
-  matchedSkills: string[]
-  missingSkills: string[]
-  source?: "ai" | "heuristic"
-  cached?: boolean
-}
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  source?: "ai" | "heuristic";
+  cached?: boolean;
+};
 
 function scoreColor(score: number): string {
-  if (score >= 70) return "var(--color-success)"
-  if (score >= 40) return "var(--color-warning)"
-  return "var(--color-destructive)"
+  if (score >= 70) return "var(--color-success)";
+  if (score >= 40) return "var(--color-warning)";
+  return "var(--color-destructive)";
 }
 
 export function MatchPanel({
   jobId,
   autoRun = false,
+  onComplete,
 }: {
-  jobId: string
-  autoRun?: boolean
+  jobId: string;
+  autoRun?: boolean;
+  onComplete?: (result: MatchResponse) => void;
 }) {
-  const [state, setState] = React.useState<"idle" | "loading" | "done" | "error">(
-    autoRun ? "loading" : "idle",
-  )
-  const [result, setResult] = React.useState<MatchResponse | null>(null)
-  const [error, setError] = React.useState<string | null>(null)
+  const [state, setState] = React.useState<
+    "idle" | "loading" | "done" | "error"
+  >(autoRun ? "loading" : "idle");
+  const [result, setResult] = React.useState<MatchResponse | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (autoRun) check()
+    if (autoRun) check();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRun])
+  }, [autoRun]);
 
   async function check() {
-    setState("loading")
-    setError(null)
+    setState("loading");
+    setError(null);
     try {
       const res = await fetch("/api/match", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jobId }),
-      })
-      const data = await res.json().catch(() => null)
+      });
+      const data = await res.json().catch(() => null);
       if (res.status === 400) {
-        setError(data?.error ?? "Gagal mengecek kecocokan.")
-        setState("error")
-        return
+        setError(data?.error ?? "Gagal mengecek kecocokan.");
+        setState("error");
+        return;
       }
       if (res.status === 429) {
-        setError(data?.error ?? "Terlalu banyak permintaan.")
-        setState("error")
-        return
+        setError(data?.error ?? "Terlalu banyak permintaan.");
+        setState("error");
+        return;
       }
       if (!res.ok) {
-        setError(data?.error ?? "Gagal mengecek kecocokan.")
-        setState("error")
-        return
+        setError(data?.error ?? "Gagal mengecek kecocokan.");
+        setState("error");
+        return;
       }
-      setResult(data as MatchResponse)
-      setState("done")
+      setResult(data as MatchResponse);
+      onComplete?.(data as MatchResponse);
+      setState("done");
     } catch {
-      setError("Terjadi kesalahan saat mengecek kecocokan.")
-      setState("error")
+      setError("Terjadi kesalahan saat mengecek kecocokan.");
+      setState("error");
     }
   }
 
-  const color = result ? scoreColor(result.score) : "var(--color-muted-status)"
+  const color = result ? scoreColor(result.score) : "var(--color-muted-status)";
 
   return (
     <div>
@@ -81,19 +84,19 @@ export function MatchPanel({
       )}
 
       {state === "loading" && (
-        <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-          <Loader2Icon className="size-4 animate-spin" />
+        <div className="text-muted-foreground flex items-center gap-2 py-2 text-sm" role="status" aria-live="polite">
+          <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
           Memeriksa kecocokan…
         </div>
       )}
 
       {state === "error" && (
         <div className="space-y-2">
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-destructive text-sm" role="alert">{error}</p>
           {error?.includes("CV") && (
             <Link
               href="/profile"
-              className="inline-block text-sm font-medium text-indigo-600 hover:underline"
+              className="text-accent inline-block text-sm font-medium hover:underline"
             >
               Ke halaman profil
             </Link>
@@ -107,7 +110,7 @@ export function MatchPanel({
       )}
 
       {state === "done" && result && (
-        <div className="space-y-3">
+        <div className="space-y-3" role="status" aria-live="polite" aria-atomic="true">
           <div className="flex items-center gap-3">
             <div
               className="flex size-14 flex-col items-center justify-center rounded-full border text-center"
@@ -117,10 +120,12 @@ export function MatchPanel({
                 backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
               }}
             >
-              <span className="text-lg font-bold leading-none">{result.score}</span>
+              <span className="text-lg leading-none font-bold">
+                {result.score}
+              </span>
               <span className="text-[10px] opacity-70">/ 100</span>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               <p>
                 {result.source === "ai"
                   ? "Skor dari AI"
@@ -134,7 +139,7 @@ export function MatchPanel({
 
           {result.matchedSkills.length > 0 && (
             <div>
-              <p className="mb-1 text-xs font-medium text-foreground">Cocok</p>
+              <p className="text-foreground mb-1 text-xs font-medium">Cocok</p>
               <div className="flex flex-wrap gap-1.5">
                 {result.matchedSkills.map((s) => (
                   <span
@@ -156,7 +161,7 @@ export function MatchPanel({
 
           {result.missingSkills.length > 0 && (
             <div>
-              <p className="mb-1 text-xs font-medium text-foreground">
+              <p className="text-foreground mb-1 text-xs font-medium">
                 Kurang / belum dimiliki
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -184,5 +189,5 @@ export function MatchPanel({
         </div>
       )}
     </div>
-  )
+  );
 }

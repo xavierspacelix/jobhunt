@@ -1,32 +1,31 @@
 # Roadmap — JobHunter
 
-Track post-MVP. Jangan kerjakan sebelum MVP 01-07 selesai + gates pass.
+Track candidates that have not been promoted. Active status remains in
+`progress-tracker.md`.
 
-## MVP (01-08)
+## MVP
 
-| ID | Feature | Spec | State |
-|---|---|---|---|
-| 01 | Foundation, Auth & DB | `features/01-foundation-auth-db.md` | planned |
-| 02 | CV Upload & Parse | `features/02-cv-upload-parse.md` | planned |
-| 03 | Job Fetch (Glints & Jobstreet) | `features/03-job-fetch.md` | planned |
-| 04 | Tracker Kanban | `features/04-tracker-kanban.md` | planned |
-| 05 | AI Matching | `features/05-ai-matching.md` | planned |
-| 06 | Email & Cover Letter | `features/06-email-coverletter.md` | planned |
-| 07 | Dashboard & Analytics | `features/07-dashboard-analytics.md` | planned |
-| 08 | On-demand Job Search & Recommendations | `features/08-job-search.md` | planned |
+Features 01-08 are MVP. Feature 12 was explicitly promoted and implemented as an
+extension-native DOM preview with explicit PKCE-authenticated direct-save.
 
 ## Post-MVP Candidates
 
 | ID | Feature | Spec | State |
 |---|---|---|---|
-| 09 | LinkedIn & Kalibrr source | `features/post-mvp/09-linkedin.md` | candidate |
-| 10 | OCR scan CV | `features/post-mvp/10-ocr.md` | candidate |
-| 11 | PWA offline | `features/post-mvp/11-pwa.md` | candidate |
-| 12 | Chrome Extension 1-klik save | `features/post-mvp/12-extension.md` | candidate |
-| 13 | Auto-tailor CV per lowongan | `features/post-mvp/13-tailor-cv.md` | candidate |
+| 09 | LinkedIn & Kalibrr source | Spec dibuat saat dipromosikan | candidate |
+| 10 | OCR scan CV | Spec dibuat saat dipromosikan | candidate |
+| 11 | PWA offline | Spec dibuat saat dipromosikan | candidate |
+| 13 | Auto-tailor CV per lowongan | Spec dibuat saat dipromosikan | candidate |
 
 ## Promotion Workflow
 
 1. `/architect` + validasi need.
 2. Resolve open-decisions & deps.
 3. Masukkan ke `build-plan.md` + `progress-tracker.md` sebagai `planned`.
+
+## External Follow-up
+
+- Feature 08 remains in progress until live Glints/Jobstreet and deployed browser
+  fallback are verified.
+- Email is not a delivered feature; OD-003 remains open before a separate email
+  spec can be promoted.

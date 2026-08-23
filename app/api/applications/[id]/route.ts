@@ -1,111 +1,106 @@
-import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { z } from "zod"
-import { prisma } from "@/lib/db"
-import { STATUS_ORDER } from "@/lib/kanban"
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import {
+  applicationPatchSchema,
+  resolveAppliedAt,
+  toOptionalDate,
+} from "@/lib/application-input";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-const patchInput = z.object({
-  status: z.enum(STATUS_ORDER as unknown as [string, ...string[]]).optional(),
-  notes: z.string().max(5000).optional(),
-  appliedAt: z.string().nullable().optional(),
-  nextFollowUpAt: z.string().nullable().optional(),
-  coverLetter: z.string().max(20000).nullable().optional(),
-})
+export const GET = auth(
+  async (req, { params }: { params: Promise<{ id: string }> }) => {
+    const email = req.auth?.user?.email;
+    if (!email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { id } = await params;
+    const application = await prisma.application.findFirst({
+      where: { id, user: { email } },
+      include: { job: true },
+    });
+    if (!application) {
+      return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 });
+    }
+    return NextResponse.json({ application });
+  },
+);
 
-export const GET = auth(async (
-  req,
-  { params }: { params: Promise<{ id: string }> },
-) => {
-  const email = req.auth?.user?.email
-  if (!email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  const { id } = await params
-  const application = await prisma.application.findFirst({
-    where: { id, user: { email } },
-    include: { job: true },
-  })
-  if (!application) {
-    return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 })
-  }
-  return NextResponse.json({ application })
-})
+export const PATCH = auth(
+  async (req, { params }: { params: Promise<{ id: string }> }) => {
+    const email = req.auth?.user?.email;
+    if (!email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { id } = await params;
+    const json = await req.json().catch(() => null);
+    const parsed = applicationPatchSchema.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Data tidak valid", issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const data = parsed.data;
 
-export const PATCH = auth(async (
-  req,
-  { params }: { params: Promise<{ id: string }> },
-) => {
-  const email = req.auth?.user?.email
-  if (!email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  const { id } = await params
-  const json = await req.json().catch(() => null)
-  const parsed = patchInput.safeParse(json)
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Data tidak valid", issues: parsed.error.flatten() },
-      { status: 400 },
-    )
-  }
-  const data = parsed.data
+    const existing = await prisma.application.findFirst({
+      where: { id, user: { email } },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 });
+    }
 
-  const existing = await prisma.application.findFirst({
-    where: { id, user: { email } },
-  })
-  if (!existing) {
-    return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 })
-  }
+    const updated = await prisma.application.update({
+      where: { id },
+      data: {
+        status: data.status,
+        notes: data.notes,
+        appliedAt: resolveAppliedAt({
+          currentStatus: existing.status,
+          currentAppliedAt: existing.appliedAt,
+          nextStatus: data.status,
+          inputAppliedAt: data.appliedAt,
+        }),
+        nextFollowUpAt: toOptionalDate(data.nextFollowUpAt),
+        coverLetter: data.coverLetter,
+      },
+      include: { job: true },
+    });
 
-  const updated = await prisma.application.update({
-    where: { id },
-    data: {
-      status: data.status as
-        | "WISHLIST"
-        | "APPLIED"
-        | "SCREENING"
-        | "INTERVIEW"
-        | "OFFER"
-        | "REJECTED"
-        | undefined,
-      notes: data.notes,
-      appliedAt:
-        data.appliedAt === null
-          ? null
-          : data.appliedAt
-            ? new Date(data.appliedAt)
-            : undefined,
-      nextFollowUpAt:
-        data.nextFollowUpAt === null
-          ? null
-          : data.nextFollowUpAt
-            ? new Date(data.nextFollowUpAt)
-            : undefined,
-      coverLetter: data.coverLetter,
-    },
-    include: { job: true },
-  })
+    return NextResponse.json({ application: updated });
+  },
+);
 
-  return NextResponse.json({ application: updated })
-})
-
-export const DELETE = auth(async (
-  req,
-  { params }: { params: Promise<{ id: string }> },
-) => {
-  const email = req.auth?.user?.email
-  if (!email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  const { id } = await params
-  const existing = await prisma.application.findFirst({
-    where: { id, user: { email } },
-  })
-  if (!existing) {
-    return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 })
-  }
-  await prisma.application.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
-})
+export const DELETE = auth(
+  async (req, { params }: { params: Promise<{ id: string }> }) => {
+    const email = req.auth?.user?.email;
+    if (!email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { id } = await params;
+    const existing = await prisma.application.findFirst({
+      where: { id, user: { email } },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 });
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.application.delete({ where: { id } });
+      const job = await tx.job.findFirst({
+        where: {
+          id: existing.jobId,
+          scope: "PRIVATE",
+          owner: { email },
+          savedBy: { none: {} },
+          applications: { none: {} },
+          matches: { none: {} },
+          recommendations: { none: {} },
+        },
+        select: { id: true },
+      });
+      if (job) await tx.job.delete({ where: { id: job.id } });
+    });
+    return NextResponse.json({ ok: true });
+  },
+);

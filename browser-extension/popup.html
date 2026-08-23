@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simpan ke Job Hunter</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header">
+        <svg class="brand-mark" viewBox="0 0 44 44" aria-hidden="true">
+          <rect x="2" y="2" width="40" height="40" rx="12" />
+          <path d="m11.5 29 7.25-7.25 5.5 5.5L33 16" />
+          <path d="M27 16h6v6" />
+        </svg>
+        <div class="brand-copy">
+          <p class="eyebrow">JOB HUNTER</p>
+          <h1>Simpan lowongan</h1>
+        </div>
+        <span id="connection-badge" class="connection-badge">Memeriksa</span>
+      </header>
+
+      <section id="page-state" class="notice" aria-labelledby="page-heading">
+        <div class="notice-dot" aria-hidden="true"></div>
+        <div>
+          <h2 id="page-heading">Memeriksa halaman</h2>
+          <p id="page-message">Pastikan tab aktif adalah detail lowongan.</p>
+        </div>
+      </section>
+
+      <article id="preview" class="preview" aria-labelledby="preview-title" hidden>
+        <div class="source-row">
+          <span id="preview-source" class="source-badge"></span>
+          <span class="preview-label">PREVIEW DOM</span>
+        </div>
+        <h2 id="preview-title"></h2>
+        <p id="preview-company" class="company"></p>
+        <dl class="facts">
+          <div id="location-row">
+            <dt>Lokasi</dt>
+            <dd id="preview-location"></dd>
+          </div>
+          <div id="salary-row">
+            <dt>Gaji</dt>
+            <dd id="preview-salary"></dd>
+          </div>
+        </dl>
+        <dl id="preview-extra" class="facts extra-facts"></dl>
+        <p id="preview-description" class="description"></p>
+      </article>
+
+      <section id="auth-panel" class="auth-panel" aria-labelledby="auth-heading" hidden>
+        <h2 id="auth-heading">Hubungkan Job Hunter</h2>
+        <p>Masuk melalui Job Hunter agar lowongan dapat disimpan ke akun Anda.</p>
+        <button id="connect" class="button primary" type="button">Hubungkan akun</button>
+      </section>
+
+      <section id="account-panel" class="account-panel" aria-label="Akun terhubung" hidden>
+        <div>
+          <span class="account-label">Terhubung sebagai</span>
+          <strong id="account-name">Akun Job Hunter</strong>
+        </div>
+        <button id="disconnect" class="text-button" type="button">Putuskan</button>
+      </section>
+
+      <div id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <button id="save" class="button primary save-button" type="button" disabled>
+        Simpan ke Job Hunter
+      </button>
+
+    </main>
+    <script src="config.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

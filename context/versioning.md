@@ -33,4 +33,8 @@ SemVer 2.0.0 `MAJOR.MINOR.PATCH[-PRERELEASE]`.
 1. Update `package.json` version.
 2. Run full checks.
 3. `chore(release): prepare vX.Y.Z`
-4. Tag `vX.Y.Z` → build & deploy (Vercel).
+4. Tag `vX.Y.Z` -> build image dan deploy melalui environment Docker/Traefik.
+
+Belum ada workflow release/deploy otomatis di repository. CI memverifikasi
+Prisma schema/migrations, lint, typecheck, test dengan PostgreSQL, dan build.
+Format check, Docker image smoke, dan browser E2E belum menjadi gate.

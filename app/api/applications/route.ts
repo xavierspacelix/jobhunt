@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
+import { jobVisibilityWhere } from "@/lib/job-data"
 
 export const runtime = "nodejs"
 
@@ -40,8 +41,8 @@ export const POST = auth(async (req) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, ...jobVisibilityWhere(user.id) },
     select: { id: true },
   })
   if (!job) {

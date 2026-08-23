@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { heuristicMatch } from "../lib/match"
+import { heuristicMatch, llmMatch } from "../lib/match"
 import type { Job, Profile } from "@/lib/generated/prisma/client"
 
 function profile(skills: string[]): Profile {
@@ -77,4 +77,43 @@ test("stripping .js keeps React distinct from JavaScript family", () => {
   const r = heuristicMatch(p, j)
   assert.equal(r.score, Math.round((2 / 3) * 100))
   assert.deepEqual(r.missingSkills, ["Node.js"])
+})
+
+test("LLM matching bounds the job description context", async () => {
+  const previousFetch = globalThis.fetch
+  const previousBaseUrl = process.env.LLM_BASE_URL
+  const previousApiKey = process.env.LLM_API_KEY
+  process.env.LLM_BASE_URL = "https://llm.example.com/v1"
+  process.env.LLM_API_KEY = "secret"
+  let requestBody = ""
+  globalThis.fetch = async (_input, init) => {
+    requestBody = String(init?.body ?? "")
+    return Response.json({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              score: 50,
+              matchedSkills: [],
+              missingSkills: [],
+              rationale: "Bounded prompt",
+            }),
+          },
+        },
+      ],
+    })
+  }
+
+  try {
+    const longJob = job([])
+    longJob.description = `${"a".repeat(12_000)}UNSENT_TAIL`
+    await llmMatch(profile([]), longJob)
+    assert.doesNotMatch(requestBody, /UNSENT_TAIL/)
+  } finally {
+    globalThis.fetch = previousFetch
+    if (previousBaseUrl === undefined) delete process.env.LLM_BASE_URL
+    else process.env.LLM_BASE_URL = previousBaseUrl
+    if (previousApiKey === undefined) delete process.env.LLM_API_KEY
+    else process.env.LLM_API_KEY = previousApiKey
+  }
 })

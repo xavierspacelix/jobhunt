@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { readLocalCv } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -8,12 +9,13 @@ export const GET = auth(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const key = new URL(req.url).searchParams.get("key");
-  if (!key) {
-    return new Response("Missing key", { status: 400 });
-  }
+  const profile = await prisma.profile.findFirst({
+    where: { user: { email: req.auth.user.email } },
+    select: { cvKey: true },
+  });
+  if (!profile?.cvKey) return new Response("Not found", { status: 404 });
 
-  const buffer = await readLocalCv(key);
+  const buffer = await readLocalCv(profile.cvKey);
   if (!buffer) {
     return new Response("Not found", { status: 404 });
   }
