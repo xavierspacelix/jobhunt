@@ -55,6 +55,12 @@ export const POST = auth(async (req) => {
 
   const rendered = await fetchRenderedHtml(url)
   const html = rendered.html
+  if (!html) {
+    return NextResponse.json(
+      { error: rendered.error ?? "Halaman diblokir (bot protection / Cloudflare)" },
+      { status: 422 },
+    )
+  }
   const fetchError: string | null = rendered.error
 
   const fields =

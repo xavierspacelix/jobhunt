@@ -30,7 +30,7 @@ export type SearchEvent =
   | { type: "links"; source: JobSource; count: number; message: string }
   | { type: "detail"; current: number; total: number; message: string }
   | { type: "result"; job: ScrapedJob; match: MatchPreview }
-  | { type: "done"; collected: number; results: number; filtered?: number; message: string }
+  | { type: "done"; collected: number; results: number; filtered?: number; blocked?: number; message: string }
   | { type: "error"; message: string }
 
 function sourceLabel(source: JobSource): string {
@@ -240,6 +240,7 @@ export async function runJobSearch(
 
   const targets = [...collected].slice(0, BATCH_LIMIT)
   let filtered = 0
+  let blocked = 0
   const candidates: ScrapedJob[] = []
   let current = 0
   const maxAgeDays = opts.maxAgeDays ?? MAX_AGE_DAYS
@@ -263,6 +264,8 @@ export async function runJobSearch(
       } else {
         candidates.push(data)
       }
+    } else {
+      blocked++
     }
     await sleep(MIN_INTERVAL_MS)
   }
@@ -288,13 +291,15 @@ export async function runJobSearch(
   }
 
   const filteredNote = filtered ? `, ${filtered} difilter (lokasi/tanggal/tutup)` : ""
+  const blockedNote = blocked ? `, ${blocked} diblokir bot protection` : ""
   const aiNote = profile ? " (skor dari AI)" : ""
   onProgress?.({
     type: "done",
     collected: collected.size,
     results,
     filtered,
-    message: `Selesai — ${results} lowongan ditemukan${filteredNote}${aiNote}. Pilih yang ingin disimpan.`,
+    blocked,
+    message: `Selesai — ${results} lowongan ditemukan${filteredNote}${blockedNote}${aiNote}. Pilih yang ingin disimpan.`,
   })
   return { collected: collected.size, results, filtered }
 }
