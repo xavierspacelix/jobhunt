@@ -10,6 +10,7 @@ test("buildSearchUrls caps skills and encodes terms", () => {
   const urls = buildSearchUrls(
     ["React", "Node.js", "Go", "Rust", "Python", "Java"],
     "GLINTS",
+    undefined,
     5,
   )
   assert.equal(urls.length, 5)
@@ -28,6 +29,17 @@ test("buildSearchUrls uses jobstreet host for JOBSTREET", () => {
 
 test("buildSearchUrls empty skills returns nothing", () => {
   assert.equal(buildSearchUrls([], "GLINTS").length, 0)
+})
+
+test("buildSearchUrls appends locationName for Glints", () => {
+  const urls = buildSearchUrls(["React"], "GLINTS", "Jakarta")
+  assert.ok(urls[0].includes("locationName=Jakarta"))
+  assert.ok(urls[0].includes("country=ID"))
+})
+
+test("buildSearchUrls appends where for Jobstreet", () => {
+  const urls = buildSearchUrls(["React"], "JOBSTREET", "Surabaya")
+  assert.ok(urls[0].includes("where=Surabaya"))
 })
 
 test("isJobDetailUrl recognizes glints detail pages", () => {

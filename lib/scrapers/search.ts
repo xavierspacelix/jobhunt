@@ -12,6 +12,7 @@ function hostFor(source: JobSource): string {
 export function buildSearchUrls(
   skills: string[],
   source: JobSource,
+  location?: string,
   limit = 5,
 ): string[] {
   const terms = (skills ?? [])
@@ -20,18 +21,19 @@ export function buildSearchUrls(
     .slice(0, limit)
   if (terms.length === 0) return []
   const host = hostFor(source)
+  const loc = location?.trim()
   if (source === "GLINTS") {
-    return terms.map(
-      (t) =>
-        `https://${host}/id/opportunities/jobs/explore?keyword=${encodeURIComponent(
-          t,
-        )}&country=ID`,
-    )
+    return terms.map((t) => {
+      const params = new URLSearchParams({ keyword: t, country: "ID" })
+      if (loc) params.set("locationName", loc)
+      return `https://${host}/id/opportunities/jobs/explore?${params.toString()}`
+    })
   }
-  return terms.map(
-    (t) =>
-      `https://www.${host}/en/job-search?key=${encodeURIComponent(t)}`,
-  )
+  return terms.map((t) => {
+    const params = new URLSearchParams({ key: t })
+    if (loc) params.set("where", loc)
+    return `https://www.${host}/en/job-search?${params.toString()}`
+  })
 }
 
 export function isJobDetailUrl(url: string, source: JobSource): boolean {

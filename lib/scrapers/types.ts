@@ -28,6 +28,7 @@ export interface ParsedFields {
   externalJobId?: string
   shareToken?: string
   companyDetails?: CompanyDetails
+  closed?: boolean
 }
 
 export type JobSource = "GLINTS" | "JOBSTREET"
