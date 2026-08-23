@@ -157,6 +157,24 @@ test("new jobs list does not call server-side scraping endpoints", () => {
   assert.doesNotMatch(source, /\/api\/jobs\/recommend-keywords/);
 });
 
+test("jobs page renders the saved-job workflow for extension jobs without a scrape tab", () => {
+  const page = readFileSync(
+    new URL("../app/jobs/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const fetcher = readFileSync(
+    new URL("../components/job-fetcher.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(page, /<JobFetcher \/>/);
+  assert.doesNotMatch(page, /<ExtensionJobList \/>/);
+  assert.doesNotMatch(fetcher, /Cari Rekomendasi/);
+  assert.doesNotMatch(fetcher, /\/api\/jobs\/search/);
+  assert.doesNotMatch(fetcher, /Input Manual \(Link\)/);
+  assert.match(fetcher, /origin === "extension"/);
+});
+
 test("extension listing uses an explicit filtered API without changing the default contract", () => {
   const component = readFileSync(
     new URL("../components/extension-job-list.tsx", import.meta.url),
@@ -164,7 +182,10 @@ test("extension listing uses an explicit filtered API without changing the defau
   );
   const route = readFileSync(new URL("../app/api/jobs/route.ts", import.meta.url), "utf8");
   assert.match(component, /\/api\/jobs\?origin=extension/);
-  assert.match(route, /extensionOnly \? extensionJobsWhere\(user\.id\) : jobVisibilityWhere\(user\.id\)/);
+  assert.match(
+    route,
+    /extensionOnly\s*\?\s*extensionJobsWhere\(user\.id\)\s*:\s*jobVisibilityWhere\(user\.id\)/,
+  );
 });
 
 test("popup preview and dashboard preserve extension recovery controls", () => {
@@ -189,7 +210,15 @@ test("popup preview and dashboard preserve extension recovery controls", () => {
   assert.doesNotMatch(popupHtml, /Pengaturan koneksi|base-url|detect-localhost/);
   assert.equal(manifest.name, "Job Hunter");
   assert.equal(manifest.icons?.["128"], "icons/icon-128.png");
-  assert.deepEqual(manifest.host_permissions, ["https://jobhunt.spacelix.qzz.io/*"]);
+  assert.deepEqual(manifest.host_permissions, [
+    "https://jobhunt.spacelix.qzz.io/*",
+    "https://glints.com/*",
+    "https://*.glints.com/*",
+    "https://id.jobstreet.com/*",
+    "https://*.jobstreet.co.id/*",
+    "https://jobstreet.com/*",
+    "https://*.jobstreet.com/*",
+  ]);
   assert.match(worker, /importScripts\("config\.js"\)/);
   assert.match(popupHtml, /<script src="config\.js"><\/script>/);
 });

@@ -21,7 +21,21 @@
         <span id="connection-badge" class="connection-badge">Memeriksa</span>
       </header>
 
-      <section id="page-state" class="notice" aria-labelledby="page-heading">
+      <nav id="tabs" class="tabs" aria-label="Mode penyimpanan">
+        <button id="tab-detail" class="tab" type="button" aria-pressed="true">
+          Ambil 1 Detail
+        </button>
+        <button id="tab-listing" class="tab" type="button" aria-pressed="false">
+          Scrape Daftar
+        </button>
+      </nav>
+
+      <section
+        id="page-state"
+        class="notice"
+        aria-labelledby="page-heading"
+        hidden
+      >
         <div class="notice-dot" aria-hidden="true"></div>
         <div>
           <h2 id="page-heading">Memeriksa halaman</h2>
@@ -29,7 +43,12 @@
         </div>
       </section>
 
-      <article id="preview" class="preview" aria-labelledby="preview-title" hidden>
+      <article
+        id="preview"
+        class="preview"
+        aria-labelledby="preview-title"
+        hidden
+      >
         <div class="source-row">
           <span id="preview-source" class="source-badge"></span>
           <span class="preview-label">PREVIEW DOM</span>
@@ -53,7 +72,9 @@
       <section id="auth-panel" class="auth-panel" aria-labelledby="auth-heading" hidden>
         <h2 id="auth-heading">Hubungkan Job Hunter</h2>
         <p>Masuk melalui Job Hunter agar lowongan dapat disimpan ke akun Anda.</p>
-        <button id="connect" class="button primary" type="button">Hubungkan akun</button>
+        <button id="connect" class="button primary" type="button">
+          Hubungkan akun
+        </button>
       </section>
 
       <section id="account-panel" class="account-panel" aria-label="Akun terhubung" hidden>
@@ -64,12 +85,38 @@
         <button id="disconnect" class="text-button" type="button">Putuskan</button>
       </section>
 
+      <section id="cv-warning" class="notice" aria-live="polite" hidden>
+        <div class="notice-dot" aria-hidden="true"></div>
+        <div>
+          <h2>Unggah CV untuk AI match</h2>
+          <p>Lowongan akan dicocokkan dengan profil Anda. Tanpa CV, penyimpanan perlu konfirmasi manual.</p>
+          <a id="cv-link" class="text-button" href="#" target="_blank" rel="noreferrer">Buka Job Hunter</a>
+        </div>
+      </section>
+
+      <section id="listing-panel" class="listing-panel" aria-labelledby="listing-heading" hidden>
+        <h2 id="listing-heading">Scrape daftar lowongan</h2>
+        <p id="listing-hint" class="hint"></p>
+        <button id="scrape" class="button primary" type="button" disabled>
+          Ambil semua lowongan
+        </button>
+        <div id="listing-progress" class="status" role="status" aria-live="polite"></div>
+        <ul id="listing-results" class="listing-results"></ul>
+      </section>
+
+      <section id="review-panel" class="listing-panel" aria-labelledby="review-heading" hidden>
+        <h2 id="review-heading">Tinjau lowongan (skor AI &lt; 70)</h2>
+        <p class="hint">Lowongan di bawah ini skor AI-nya di bawah ambang. Pilih simpan atau lewati.</p>
+        <ul id="review-list" class="listing-results"></ul>
+      </section>
+
       <div id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <button id="skip-review" class="button" type="button" hidden>Lewati</button>
 
       <button id="save" class="button primary save-button" type="button" disabled>
         Simpan ke Job Hunter
       </button>
-
     </main>
     <script src="config.js"></script>
     <script src="popup.js"></script>

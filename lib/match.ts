@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import type { Job, Profile } from "@/lib/generated/prisma/client";
 import { z } from "zod";
-import { callChatJson } from "./llm";
+import { callChatJson, type LlmCredentials } from "./llm";
+import { decryptSecret } from "./crypto";
 
 export type MatchResult = {
   score: number;
@@ -10,6 +11,10 @@ export type MatchResult = {
   source: "ai" | "heuristic";
   cached?: boolean;
 };
+
+// Minimum AI match score required before an extension-scraped job is
+// auto-saved. Below this, the job is returned for manual review instead.
+export const MATCH_SAVE_THRESHOLD = 70;
 
 const matchLlmSchema = z
   .object({
@@ -20,7 +25,7 @@ const matchLlmSchema = z
   })
   .strict();
 
-const MATCH_PROMPT_VERSION = "v4";
+const MATCH_PROMPT_VERSION = "v5";
 const MATCH_DESCRIPTION_LIMIT = 12_000;
 
 export function parseMatchLlmOutput(value: unknown): MatchResult {
@@ -107,6 +112,7 @@ const SKILL_CANON: Record<string, string> = {
   nextjs: "next",
   node: "node",
   nodejs: "node",
+  "node js": "node",
   express: "express",
   microservice: "microservices",
 };
@@ -188,6 +194,9 @@ export function heuristicMatch(profile: Profile, job: Job): MatchResult {
   for (const c of canonFromText(profileContext(profile))) {
     profCanon.add(c);
   }
+  for (const c of canonFromText(profile.rawText ?? "")) {
+    profCanon.add(c);
+  }
   const jobMap = new Map<string, string>();
   for (const s of job.skills ?? []) {
     const c = normalizeSkill(s);
@@ -225,16 +234,18 @@ export async function llmMatch(
   profile: Profile,
   job: Job,
   options: { timeoutMs?: number } = {},
+  creds?: LlmCredentials,
 ): Promise<MatchResult> {
   const system =
     "You are a strict but fair recruitment matching engine. Respond with STRICT JSON only, no prose. " +
     "Consider the candidate's FULL profile: CV text, location, skills, work experience, education, certifications, and summary. " +
     "Rules: " +
-    "1) A required competency is FULLY matched only if clearly evidenced by an explicit skill, a relevant job title, or a directly relevant experience description. " +
+    "1) A required competency is FULLY matched if it is clearly evidenced by an explicit skill, a relevant job title, a directly relevant experience description, or any mention anywhere in the candidate's CV text or work-experience entries. " +
     "2) Do NOT assume one technology implies another (React does NOT imply Node.js; JavaScript knowledge does NOT imply Express.js). " +
     "3) DO credit demonstrated adjacent experience: e.g., several years as a Backend/Fullstack Developer using JavaScript is evidence of Node.js familiarity and deserves PARTIAL credit, not zero. " +
     "4) Weight required/hard tech-stack items heavily: a missing required stack item must substantially lower the score UNLESS the candidate's experience strongly demonstrates equivalent capability. " +
-    "5) A score of 100 means the candidate meets essentially all stated requirements.";
+    "5) A score of 100 means the candidate meets essentially all stated requirements. " +
+    "6) A required technology is MATCHED when it appears anywhere in the candidate's skills, work-experience descriptions, summary, or full CV text (e.g., 'Built REST APIs with Node.js' or a past role using Golang means Node.js/Golang are matched). Only mark a technology MISSING when there is genuinely no mention of it anywhere in the profile.";
   const user = `Return JSON with this exact shape:
 {
   "score": number (integer 0-100),
@@ -261,16 +272,24 @@ Job:
 - Education: ${job.education ?? ""}
 - Skills: ${(job.skills ?? []).join(", ")}
 - Description: ${(job.description ?? "").slice(0, MATCH_DESCRIPTION_LIMIT)}`;
-  return parseMatchLlmOutput(await callChatJson(system, user, options));
+  return parseMatchLlmOutput(await callChatJson(system, user, options, creds));
 }
 
 export async function scoreMatch(
   profile: Profile,
   job: Job,
 ): Promise<MatchResult> {
-  if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
+  const profileApiKey = profile.llmApiKey
+    ? decryptSecret(profile.llmApiKey)
+    : undefined;
+  const profileCreds: LlmCredentials | undefined =
+    profileApiKey && profile.llmBaseUrl
+      ? { apiKey: profileApiKey, baseUrl: profile.llmBaseUrl, model: profile.llmModel ?? undefined }
+      : undefined;
+
+  if (profileCreds || (process.env.LLM_API_KEY && process.env.LLM_BASE_URL)) {
     try {
-      return await llmMatch(profile, job);
+      return await llmMatch(profile, job, {}, profileCreds);
     } catch (err) {
       const detail =
         err instanceof Error ? `${err.name}: ${err.message}` : String(err);

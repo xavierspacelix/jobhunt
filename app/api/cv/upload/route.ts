@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parsePdf } from "@/lib/cv-parse";
-import { extractCv } from "@/lib/llm";
+import { extractCv, type LlmCredentials } from "@/lib/llm";
 import { deleteCv, getCvUrl, saveCv } from "@/lib/storage";
 import { hasPdfMagic } from "@/lib/pdf";
 import { cvUploadRateLimit } from "@/lib/rate-limit";
+import { decryptSecret } from "@/lib/crypto";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,17 @@ export const POST = auth(async (req) => {
   }
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, profile: { select: { cvKey: true } } },
+    select: {
+      id: true,
+      profile: {
+        select: {
+          cvKey: true,
+          llmApiKey: true,
+          llmBaseUrl: true,
+          llmModel: true,
+        },
+      },
+    },
   });
   if (!user) {
     return jsonError("Unauthorized", 401);
@@ -82,7 +93,19 @@ export const POST = auth(async (req) => {
     );
   }
 
-  const { data, source } = await extractCv(rawText);
+  const profileLlmApiKey = user.profile?.llmApiKey
+    ? decryptSecret(user.profile.llmApiKey)
+    : undefined;
+  const creds: LlmCredentials | undefined =
+    profileLlmApiKey && user.profile?.llmBaseUrl
+      ? {
+          apiKey: profileLlmApiKey,
+          baseUrl: user.profile.llmBaseUrl,
+          model: user.profile.llmModel ?? undefined,
+        }
+      : undefined;
+
+  const { data, source } = await extractCv(rawText, creds);
   const cvKey = await saveCv(userId, buffer);
   let cvUrl: string | null;
   let profile;

@@ -155,49 +155,100 @@ export const GET = auth(async (req) => {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const extensionOnly = new URL(req.url).searchParams.get("origin") === "extension";
-  const jobs = await prisma.job.findMany({
-    where: extensionOnly ? extensionJobsWhere(user.id) : jobVisibilityWhere(user.id),
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    include: {
-      savedBy: {
-        where: { userId: user.id },
-        select: { origin: true },
-      },
-      matches: {
-        where: { userId: user.id },
-        select: {
-          score: true,
-          matchedSkills: true,
-          missingSkills: true,
+  const params = new URL(req.url).searchParams;
+  const extensionOnly = params.get("origin") === "extension";
+  const limit = Math.min(
+    Math.max(Number.parseInt(params.get("limit") ?? "10", 10) || 10, 1),
+    100,
+  );
+  const page = Math.max(
+    Number.parseInt(params.get("page") ?? "1", 10) || 1,
+    1,
+  );
+  const sourceParam = params.get("source");
+  const source =
+    sourceParam === "GLINTS" || sourceParam === "JOBSTREET"
+      ? (sourceParam as "GLINTS" | "JOBSTREET")
+      : null;
+  const q = params.get("q")?.trim() || null;
+  const match = params.get("match");
+
+  const base = extensionOnly
+    ? extensionJobsWhere(user.id)
+    : jobVisibilityWhere(user.id);
+  const filters = [];
+  if (source) {
+    filters.push({ source });
+  }
+  if (q) {
+    filters.push({
+      OR: [
+        { title: { contains: q, mode: "insensitive" as const } },
+        { company: { contains: q, mode: "insensitive" as const } },
+      ],
+    });
+  }
+  if (match === "matched") {
+    filters.push({ matches: { some: { userId: user.id, score: { gte: 1 } } } });
+  } else if (match === "high") {
+    filters.push({ matches: { some: { userId: user.id, score: { gte: 70 } } } });
+  } else if (match === "unmatched") {
+    filters.push({ matches: { none: { userId: user.id } } });
+  }
+  const where = filters.length ? { AND: [base, ...filters] } : base;
+
+  const [total, jobs] = await Promise.all([
+    prisma.job.count({ where }),
+    prisma.job.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        savedBy: {
+          where: { userId: user.id },
+          select: { origin: true },
+        },
+        matches: {
+          where: { userId: user.id },
+          select: {
+            score: true,
+            matchedSkills: true,
+            missingSkills: true,
+          },
+        },
+        applications: {
+          where: { userId: user.id },
+          select: { id: true },
+        },
+        recommendations: {
+          where: { userId: user.id },
+          select: { id: true },
         },
       },
-      applications: {
-        where: { userId: user.id },
-        select: { id: true },
-      },
-      recommendations: {
-        where: { userId: user.id },
-        select: { id: true },
-      },
-    },
-  });
+    }),
+  ]);
 
   const jobsWithScore = jobs.map(
     ({ savedBy, matches, applications, recommendations, ...job }) => {
-    return {
-      ...job,
-      matchScore: matches[0]?.score ?? null,
-      matchedSkills: matches[0]?.matchedSkills ?? [],
-      missingSkills: matches[0]?.missingSkills ?? [],
-      tracked: applications.length > 0,
-      origin: extensionOnly
-        ? ("extension" as const)
-        : savedJobDisplayOrigin(savedBy[0]?.origin, recommendations.length > 0),
-    };
+      return {
+        ...job,
+        matchScore: matches[0]?.score ?? null,
+        matchedSkills: matches[0]?.matchedSkills ?? [],
+        missingSkills: matches[0]?.missingSkills ?? [],
+        tracked: applications.length > 0,
+        origin: extensionOnly
+          ? ("extension" as const)
+          : savedJobDisplayOrigin(savedBy[0]?.origin, recommendations.length > 0),
+      };
     },
   );
 
-  return NextResponse.json({ jobs: jobsWithScore });
+  return NextResponse.json({
+    jobs: jobsWithScore,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  });
 });

@@ -134,6 +134,7 @@ test("saved job origin preserves manual and search provenance", () => {
   assert.equal(savedJobDisplayOrigin("MANUAL", false), "manual");
   assert.equal(savedJobDisplayOrigin("SEARCH", true), "auto");
   assert.equal(savedJobDisplayOrigin("MANUAL", true), "both");
+  assert.equal(savedJobDisplayOrigin("EXTENSION", false), "extension");
   assert.equal(savedJobDisplayOrigin(undefined, false), null);
 });
 

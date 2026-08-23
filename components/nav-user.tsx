@@ -21,7 +21,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react"
+import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon, SettingsIcon } from "lucide-react"
 
 export function NavUser({
   user,
@@ -76,6 +76,10 @@ export function NavUser({
             <DropdownMenuItem render={<Link href="/profile" />}>
               <BadgeCheckIcon />
               Profil & CV
+            </DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/settings" />}>
+              <SettingsIcon />
+              Pengaturan
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

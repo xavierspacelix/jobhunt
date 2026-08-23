@@ -67,9 +67,20 @@ File: `components/job-fetcher.tsx`
 
 - Tab rail: `rounded-lg border border-border bg-card p-1`; each tab is a
   `min-h-11 rounded-md px-3 py-2 text-sm font-medium` button with
-  `aria-pressed`. Active tabs use `bg-secondary text-foreground`.
-- Search/manual panels use `rounded-xl border border-border bg-card p-5` with
-  `md:p-6` for primary panels; result rows use `rounded-xl ... p-4` and `gap-3`.
+  `aria-pressed`. Active tabs use `bg-secondary text-foreground`; visible tabs
+  are `Cari Rekomendasi` and `Lowongan saya`, with recommendations selected by
+  default.
+- Search panels use `rounded-xl border border-border bg-card p-5` with `md:p-6`
+  for primary panels. Saved jobs share one `rounded-xl border border-border
+  bg-card` list surface with `divide-y divide-border`; compact rows use `p-3`
+  (`md:px-4`) instead of nested cards.
+- Compact saved rows keep title, company/location, source, provenance, and
+  essential icon actions visible. Metadata uses truncated `text-xs
+  text-muted-foreground`; actions use 44px mobile and 36px desktop targets.
+- Source and provenance badges use text plus distinct tokenized colors: Glints
+  uses success, Jobstreet uses info, Extension uses warning, and saved search
+  provenance uses muted-status. Each uses a matching border and 10% mixed
+  background, so meaning remains visible in light and dark themes.
 - Empty saved state uses `rounded-xl border border-dashed border-border
   bg-card/50 p-8 text-center` with muted icon/copy.
 
@@ -117,6 +128,9 @@ File: `components/job-fetcher.tsx`
 - Never expose score by color alone: keep numeric text and labeled `Cocok` /
   `Kurang` skill groups. Matched skills use secondary pills; missing skills use
   `border-destructive/40 text-destructive` outlined pills.
+- Saved-list rows do not expand for AI output. Existing score and matched/missing
+  skills, plus the check/recheck action, live under the `AI Match` section in the
+  job detail sheet.
 - External links and icon controls retain 44px mobile targets; icon-only detail,
   close, and delete controls require Indonesian `aria-label` text.
 

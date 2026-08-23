@@ -19,8 +19,19 @@ const manifestPath = path.join(output, "manifest.json")
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
 manifest.name = "Job Hunter (Local)"
 manifest.version_name = `${manifest.version}-local`
-manifest.host_permissions = ["http://localhost:3000/*"]
-manifest.externally_connectable.matches = ["http://localhost:3000/*"]
+manifest.host_permissions = [
+  "http://localhost:3000/*",
+  "https://glints.com/*",
+  "https://*.glints.com/*",
+  "https://id.jobstreet.com/*",
+  "https://*.jobstreet.co.id/*",
+  "https://jobstreet.com/*",
+  "https://*.jobstreet.com/*",
+]
+manifest.externally_connectable.matches = [
+  "http://localhost:3000/*",
+  "https://jobhunt.spacelix.qzz.io/*",
+]
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8")
 
 console.log(`Development extension created at ${output}`)

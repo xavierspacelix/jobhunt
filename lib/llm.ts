@@ -205,6 +205,23 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export type LlmCredentials = {
+  apiKey: string;
+  baseUrl: string;
+  model?: string;
+};
+
+function resolveCredentials(creds?: LlmCredentials): LlmCredentials | null {
+  const baseUrl = (creds?.baseUrl ?? process.env.LLM_BASE_URL ?? "").replace(
+    /\/$/,
+    "",
+  );
+  const apiKey = creds?.apiKey ?? process.env.LLM_API_KEY ?? "";
+  const model = creds?.model ?? process.env.LLM_MODEL ?? "gpt-4o-mini";
+  if (!baseUrl || !apiKey) return null;
+  return { apiKey, baseUrl, model };
+}
+
 function extractSkills(text: string): string[] {
   const found = new Set<string>();
   for (const skill of SKILL_DICTIONARY) {
@@ -480,7 +497,10 @@ export function heuristicCv(text: string): CvData {
   };
 }
 
-async function extractWithLlm(text: string): Promise<CvData> {
+async function extractWithLlm(
+  text: string,
+  creds: LlmCredentials,
+): Promise<CvData> {
   const system =
     "You are a CV/resume parser. Extract structured data and respond with STRICT JSON only, no prose.";
   const user = `Return JSON with this exact shape:
@@ -500,16 +520,32 @@ async function extractWithLlm(text: string): Promise<CvData> {
 Parse the CV below:
 ${text.slice(0, 12000)}`;
 
-  return parseCvLlmOutput(await callChatJson(system, user));
+  return parseCvLlmOutput(await callChatJson(system, user, {}, creds));
 }
 
-export async function extractCv(text: string): Promise<{
+export async function extractCv(
+  text: string,
+  creds?: LlmCredentials,
+): Promise<{
   data: CvData;
   source: "ai" | "heuristic";
 }> {
-  if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
+  const resolved = creds ? resolveCredentials(creds) : null;
+  if (resolved) {
     try {
-      return { data: await extractWithLlm(text), source: "ai" };
+      return { data: await extractWithLlm(text, resolved), source: "ai" };
+    } catch (err) {
+      console.error(
+        "[cv] LLM extraction failed, falling back to heuristic",
+        err,
+      );
+    }
+  } else if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
+    try {
+      return {
+        data: await extractWithLlm(text, resolveCredentials()!),
+        source: "ai",
+      };
     } catch (err) {
       console.error(
         "[cv] LLM extraction failed, falling back to heuristic",
@@ -520,38 +556,75 @@ export async function extractCv(text: string): Promise<{
   return { data: heuristicCv(text), source: "heuristic" };
 }
 
+const DEBUG_LLM = process.env.NODE_ENV !== "production";
+
+function redactedAuth(apiKey: string): string {
+  if (!apiKey) return "(empty)";
+  return `Bearer ${apiKey.slice(0, 4)}…(redacted)`;
+}
+
 export async function callChatJson(
   system: string,
   user: string,
   options: { timeoutMs?: number } = {},
+  creds?: LlmCredentials,
 ): Promise<unknown> {
-  const baseUrl = process.env.LLM_BASE_URL!.replace(/\/$/, "");
-  const apiKey = process.env.LLM_API_KEY!;
-  const model = process.env.LLM_MODEL ?? "gpt-4o-mini";
+  const resolved = resolveCredentials(creds);
+  if (!resolved) {
+    throw new Error("LLM not configured");
+  }
+  const { baseUrl, apiKey, model } = resolved;
+  const endpoint = `${baseUrl}/chat/completions`;
+  const payload = {
+    model,
+    temperature: 0.2,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  };
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
+  if (DEBUG_LLM) {
+    console.log("[llm:request]", {
+      endpoint,
+      model,
+      auth: redactedAuth(apiKey),
+      systemLength: system.length,
+      userLength: user.length,
+      userPreview: user.slice(0, 200),
+    });
+  }
+
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(options.timeoutMs ?? getLlmTimeoutMs()),
   });
 
   if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (DEBUG_LLM) {
+      console.error("[llm:response:error]", {
+        status: res.status,
+        body: text.slice(0, 500),
+      });
+    }
     throw new Error(`LLM request failed: ${res.status}`);
   }
 
   const json = chatResponseSchema.parse(await res.json());
   const content = json.choices[0].message.content;
+  if (DEBUG_LLM) {
+    console.log("[llm:response:ok]", {
+      status: res.status,
+      contentLength: content.length,
+      contentPreview: content.slice(0, 300),
+    });
+  }
   return JSON.parse(content);
 }

@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { AuthenticatedShell } from "@/components/authenticated-shell";
-import { ExtensionJobList } from "@/components/extension-job-list";
+import { JobFetcher } from "@/components/job-fetcher";
 import { PuzzleIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export default async function JobsPage() {
   const email = session?.user?.email ?? undefined;
 
   return (
-    <AuthenticatedShell pageLabel="Lowongan dari Extension" userEmail={email}>
+    <AuthenticatedShell pageLabel="Lowongan" userEmail={email}>
       <section className="border-border bg-card rounded-xl border p-5 md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
@@ -25,7 +25,7 @@ export default async function JobsPage() {
           <PuzzleIcon className="text-accent size-10" aria-hidden="true" />
         </div>
       </section>
-      <ExtensionJobList />
+      <JobFetcher />
     </AuthenticatedShell>
   );
 }

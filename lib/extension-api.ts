@@ -24,12 +24,14 @@ export function extensionApiResponse(
 
 export function extensionOptionsResponse(request: Request): Response {
   const origin = request.headers.get("origin");
-  if (!isValidExtensionOrigin(origin)) {
+  // Block foreign web origins, but allow extension origins and the "null"
+  // origin some browsers send for extension-popup cross-origin fetches.
+  if (origin && origin !== "null" && !isValidExtensionOrigin(origin)) {
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   }
   return new Response(null, {
     status: 204,
-    headers: extensionCorsHeaders(origin),
+    headers: extensionCorsHeaders(origin || "*"),
   });
 }
 
@@ -99,8 +101,6 @@ export async function authenticateExtensionRequest(
   requiredScope: "EXTENSION_JOBS_WRITE" | "EXTENSION_ACCOUNT_READ" =
     "EXTENSION_JOBS_WRITE",
 ) {
-  const extensionId = getExtensionIdFromOrigin(request.headers.get("origin"));
-  if (!extensionId) return null;
   const token = parseExtensionBearerToken(request.headers.get("authorization"));
   if (!token) return null;
 
@@ -122,10 +122,19 @@ export async function authenticateExtensionRequest(
     !connection ||
     connection.revokedAt ||
     connection.expiresAt <= new Date() ||
-    connection.extensionId !== extensionId ||
     !connection.scopes.includes(requiredScope)
   ) {
     return null;
+  }
+
+  // When the browser sends a valid extension Origin, ensure it matches the
+  // token's extension id (defense in depth against cross-extension token use).
+  // Some extension-popup cross-origin fetches omit/strip the Origin header, in
+  // which case the secret Bearer token alone proves the request is the extension.
+  const providedOrigin = request.headers.get("origin");
+  if (providedOrigin) {
+    const originId = getExtensionIdFromOrigin(providedOrigin);
+    if (!originId || originId !== connection.extensionId) return null;
   }
 
   return connection;

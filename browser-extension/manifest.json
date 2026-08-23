@@ -2,14 +2,22 @@
   "manifest_version": 3,
   "name": "Job Hunter",
   "description": "Ambil detail lowongan Glints atau Jobstreet, tinjau, lalu simpan langsung ke Job Hunter.",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu67+hnie6IfYAzlrfeP60nBXNxgF+l1/VSbpYCNbNsMHywxZvZRn0y3Nlyr+r8Av3heZVnqyWhvHfMG7fzUlf3J1p4u2AcAQl2KRHx04kezcOgK3ILr+2XnztM/KIyGTzH9LAMkByFinB/xOY+iGOiMdN5B1CxM5uImPPctSvs/7BCYdbeilad/UsuGb+j7hGuUePbyeNsN9jePgPGeJ2Ch6MWpzXrJdWmC/zeFjeU5Aq+KnnCp9SLXu6K9l/nnjFyNoNr5Xs8o2lhfbCBP1o4xqL7OtWXG10IWmigGxzJnswDGs5oqg8JOEtc4srstLMKv7lijArqAEHzwGkiRZuwIDAQAB",
-  "permissions": ["activeTab", "scripting", "storage", "identity"],
+  "permissions": ["activeTab", "scripting", "storage", "identity", "tabs"],
   "background": { "service_worker": "service-worker.js" },
   "externally_connectable": {
     "matches": ["https://jobhunt.spacelix.qzz.io/*"]
   },
-  "host_permissions": ["https://jobhunt.spacelix.qzz.io/*"],
+  "host_permissions": [
+    "https://jobhunt.spacelix.qzz.io/*",
+    "https://glints.com/*",
+    "https://*.glints.com/*",
+    "https://id.jobstreet.com/*",
+    "https://*.jobstreet.co.id/*",
+    "https://jobstreet.com/*",
+    "https://*.jobstreet.com/*"
+  ],
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

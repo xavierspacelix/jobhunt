@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 type ExperienceEntry = {
   role?: string;
@@ -48,6 +49,9 @@ type Profile = {
   links: string[] | null;
   cvKey: string | null;
   parsedWith: string | null;
+  llmBaseUrl: string | null;
+  llmModel: string | null;
+  hasLlmApiKey: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -548,19 +552,46 @@ export function ProfileManager() {
           </div>
         )}
 
+        {profile && !editing && (
+          <div
+            className={
+              profile.hasLlmApiKey && profile.llmBaseUrl
+                ? "border-accent/40 bg-accent/10 text-foreground mt-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
+                : "border-destructive/40 bg-destructive/10 text-destructive mt-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
+            }
+            role="status"
+          >
+            <InfoIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              {profile.hasLlmApiKey && profile.llmBaseUrl ? (
+                <>
+                  AI Match <strong>aktif</strong> menggunakan kunci API LLM
+                  Anda sendiri. Biaya ditanggung oleh masing-masing akun.
+                </>
+              ) : (
+                <>
+                  AI Match <strong>belum aktif</strong>. Buka{" "}
+                  <Link href="/settings" className="text-accent underline">
+                    halaman Pengaturan
+                  </Link>{" "}
+                  untuk mengatur Base URL, API Key, &amp; Model LLM Anda agar
+                  pencocokan lowongan menggunakan AI. Tanpa itu, pencocokan
+                  memakai heuristik gratis.
+                </>
+              )}
+            </span>
+          </div>
+        )}
+
         {isHeuristic && (
           <div className="border-accent/40 bg-accent/10 text-foreground mt-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm">
             <InfoIcon className="text-accent mt-0.5 size-4 shrink-0" />
             <span>
-              Hasil ekstraksi menggunakan heuristik (tanpa AI) sehingga
-              kualitasnya terbatas. Atur{" "}
-              <code className="bg-background/60 rounded px-1 py-0.5 text-xs">
-                LLM_API_KEY
-              </code>{" "}
-              &amp;{" "}
-              <code className="bg-background/60 rounded px-1 py-0.5 text-xs">
-                LLM_BASE_URL
-              </code>{" "}
+              Hasil ekstraksi CV menggunakan heuristik (tanpa AI) sehingga
+              kualitasnya terbatas. Atur Base URL &amp; API Key LLM Anda di{" "}
+              <Link href="/settings" className="text-accent underline">
+                halaman Pengaturan
+              </Link>{" "}
               untuk hasil lebih akurat.
             </span>
           </div>

@@ -22,6 +22,7 @@ import {
   FileTextIcon,
   SearchIcon,
   ListChecksIcon,
+  SettingsIcon,
 } from "lucide-react";
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { title: "Profil & CV", url: "/profile", icon: <FileTextIcon /> },
   { title: "Lowongan Extension", url: "/jobs", icon: <SearchIcon /> },
   { title: "Pelacak Lamaran", url: "/tracker", icon: <ListChecksIcon /> },
+  { title: "Pengaturan", url: "/settings", icon: <SettingsIcon /> },
 ];
 
 export function AppSidebar({

@@ -16,9 +16,11 @@ export function MatchDialog({
   jobId,
   trigger,
   onComplete,
+  forceRefresh = false,
 }: {
   jobId: string
   trigger?: React.ReactElement
+  forceRefresh?: boolean
   onComplete?: (result: {
     score: number
     matchedSkills: string[]
@@ -45,7 +47,12 @@ export function MatchDialog({
           Skor kecocokan profil CV dengan lowongan ini.
         </DialogDescription>
         <div className="mt-4">
-          <MatchPanel jobId={jobId} autoRun={open} onComplete={onComplete} />
+          <MatchPanel
+            jobId={jobId}
+            autoRun={open}
+            forceRefresh={forceRefresh}
+            onComplete={onComplete}
+          />
         </div>
       </DialogContent>
     </Dialog>
