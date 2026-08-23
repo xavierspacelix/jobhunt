@@ -186,8 +186,9 @@ of 5/10/20 seconds.
   `traefik-public` network. It does not define dev, Postgres, MinIO, or cron
   services.
 - PostgreSQL and optionally MinIO are external resources supplied through env.
-- Container startup automatically runs `prisma migrate deploy`, then Next.js as
-  UID/GID 1001. Chromium is installed for browser fallback.
+- Container runtime includes `prisma.config.ts`; startup automatically runs
+  `prisma migrate deploy` with the Compose-injected `DATABASE_URL`, then Next.js
+  as UID/GID 1001. Chromium is installed for browser fallback.
 - Docker HEALTHCHECK calls the DB-aware `/api/health` endpoint. Compose persists
   `/app/uploads` in a named volume and applies a 6 MiB Traefik body limit.
 

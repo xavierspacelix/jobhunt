@@ -43,8 +43,8 @@ intent remains defined by the UI docs and MASTER.
 - PostgreSQL health is checked by `/api/health`. CI validates schema, applies
   migrations, and runs lint/typecheck/tests/build against PostgreSQL.
 - The production image installs Chromium, runs non-root, has a health check, and
-  applies migrations before startup. Compose persists local uploads and enforces
-  a 6 MiB Traefik request-body ceiling.
+  includes the Prisma CLI config, and applies migrations before startup. Compose
+  persists local uploads and enforces a 6 MiB Traefik request-body ceiling.
 - Feature 12 provides Manifest V3 DOM capture, complete local preview, explicit
   direct-save, allowlisted PKCE connection, per-installation expiring tokens, and
   current-browser install detection without exposing web session credentials.
@@ -67,7 +67,7 @@ intent remains defined by the UI docs and MASTER.
 |---|---|
 | `yarn lint` | pass |
 | `yarn typecheck` | pass |
-| `RUN_DB_TESTS=1 yarn test` | pass, 102/102 across 16 files |
+| `RUN_DB_TESTS=1 yarn test` | pass, 103/103 across 16 files |
 | `yarn build` | pass |
 | `yarn prisma validate` | pass |
 | `yarn prisma migrate status` | pass |
