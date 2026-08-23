@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "JobHunter Capture",
+  "version": "0.1.0",
+  "description": "Kirim HTML lowongan Glints/Jobstreet dari browser kamu ke JobHunter (lewati Cloudflare 403).",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://*.glints.com/*",
+    "https://*.jobstreet.co.id/*",
+    "https://*.jobstreet.com/*",
+    "https://jobhunt.spacelix.qzz.io/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ambil lowongan"
+  },
+  "options_page": "options.html"
+}
