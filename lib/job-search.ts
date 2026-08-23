@@ -5,7 +5,8 @@ import { fetchRenderedHtml, type RenderResult } from "@/lib/scrapers/render"
 import { parseGlints } from "@/lib/scrapers/glints"
 import { parseJobstreet } from "@/lib/scrapers/jobstreet"
 import { buildSearchUrls, extractJobLinks, SEARCH_HOSTS } from "@/lib/scrapers/search"
-import { heuristicMatch } from "@/lib/match"
+import { scoreMatch } from "@/lib/match"
+import type { MatchResult } from "@/lib/match"
 import type { JobSource, ParsedFields } from "@/lib/scrapers/types"
 
 export const BATCH_LIMIT = 20
@@ -238,8 +239,8 @@ export async function runJobSearch(
   }
 
   const targets = [...collected].slice(0, BATCH_LIMIT)
-  let results = 0
   let filtered = 0
+  const candidates: ScrapedJob[] = []
   let current = 0
   const maxAgeDays = opts.maxAgeDays ?? MAX_AGE_DAYS
   const onlyOpen = opts.onlyOpen !== false
@@ -260,23 +261,83 @@ export async function runJobSearch(
       } else if (opts.location && !locationMatches(opts.location, data.location)) {
         filtered++
       } else {
-        const match: MatchPreview = profile
-          ? heuristicMatch(profile as Profile, data as unknown as Job)
-          : { score: 0, matchedSkills: [], missingSkills: [], source: "heuristic" }
-        results++
-        onProgress?.({ type: "result", job: data, match })
+        candidates.push(data)
       }
     }
     await sleep(MIN_INTERVAL_MS)
   }
 
+  // LLM contribution: score every candidate against the profile. Uses the AI
+  // model when LLM_API_KEY/LLM_BASE_URL are set, otherwise falls back to the
+  // heuristic matcher. Scored with bounded concurrency so a large batch of
+  // results doesn't fire dozens of model calls at once.
+  let results = 0
+  if (candidates.length > 0) {
+    onProgress?.({
+      type: "search",
+      source: "GLINTS",
+      message: profile
+        ? "Menilai kecocokan tiap lowongan dengan AI…"
+        : "Menyiapkan hasil…",
+    })
+    const scored = await scoreCandidates(profile as Profile | null, candidates)
+    for (const { job, match } of scored) {
+      results++
+      onProgress?.({ type: "result", job, match })
+    }
+  }
+
   const filteredNote = filtered ? `, ${filtered} difilter (lokasi/tanggal/tutup)` : ""
+  const aiNote = profile ? " (skor dari AI)" : ""
   onProgress?.({
     type: "done",
     collected: collected.size,
     results,
     filtered,
-    message: `Selesai — ${results} lowongan ditemukan${filteredNote}. Pilih yang ingin disimpan.`,
+    message: `Selesai — ${results} lowongan ditemukan${filteredNote}${aiNote}. Pilih yang ingin disimpan.`,
   })
   return { collected: collected.size, results, filtered }
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length)
+  let cursor = 0
+  async function worker() {
+    while (cursor < items.length) {
+      const idx = cursor++
+      out[idx] = await fn(items[idx])
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  )
+  return out
+}
+
+async function scoreCandidates(
+  profile: Profile | null,
+  candidates: ScrapedJob[],
+): Promise<{ job: ScrapedJob; match: MatchPreview }[]> {
+  if (!profile) {
+    return candidates.map((job) => ({
+      job,
+      match: { score: 0, matchedSkills: [], missingSkills: [], source: "heuristic" },
+    }))
+  }
+  return mapWithConcurrency(candidates, 4, async (job) => {
+    const m: MatchResult = await scoreMatch(profile, job as unknown as Job)
+    return {
+      job,
+      match: {
+        score: m.score,
+        matchedSkills: m.matchedSkills,
+        missingSkills: m.missingSkills,
+        source: m.source,
+      },
+    }
+  })
 }
