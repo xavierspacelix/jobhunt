@@ -78,7 +78,9 @@ export function NavUser({
               Profil & CV
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: window.location.origin + "/login" })}
+            >
               <LogOutIcon />
               Keluar
             </DropdownMenuItem>
