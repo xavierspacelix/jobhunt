@@ -7,7 +7,12 @@ import {
   privateJobDedupeKey,
   savedJobDisplayOrigin,
 } from "../lib/job-data";
-import { signJobPreview, verifyJobPreview } from "../lib/job-preview";
+import {
+  recommendationPreviewMatchesProfile,
+  signJobPreview,
+  verifyJobPreview,
+  verifyRecommendationPreview,
+} from "../lib/job-preview";
 
 const secret = "test-preview-secret";
 const now = Date.UTC(2026, 7, 23, 12);
@@ -53,6 +58,59 @@ test("job preview rejects tampering and expiry", () => {
   );
   assert.equal(
     verifyJobPreview(token, "user-a", { secret, now: now + 1000 }),
+    null,
+  );
+});
+
+test("recommendation preview binds trusted AI match to the signed job", () => {
+  const token = signJobPreview(job, "user-a", {
+    secret,
+    now,
+    match: {
+      score: 88,
+      matchedSkills: ["TypeScript"],
+      missingSkills: ["GraphQL"],
+      source: "ai",
+      profileRevision: "2026-08-24T00:00:00.000Z",
+    },
+  });
+
+  const preview = verifyRecommendationPreview(token, "user-a", { secret, now });
+  assert.deepEqual(preview, {
+    job,
+    match: {
+      score: 88,
+      matchedSkills: ["TypeScript"],
+      missingSkills: ["GraphQL"],
+      source: "ai",
+      profileRevision: "2026-08-24T00:00:00.000Z",
+    },
+  });
+  assert.ok(preview);
+  assert.equal(
+    recommendationPreviewMatchesProfile(
+      preview,
+      new Date("2026-08-24T00:00:00.000Z"),
+    ),
+    true,
+  );
+  assert.equal(
+    recommendationPreviewMatchesProfile(
+      preview,
+      new Date("2026-08-24T00:00:01.000Z"),
+    ),
+    false,
+  );
+  assert.equal(
+    verifyRecommendationPreview(token, "user-b", { secret, now }),
+    null,
+  );
+});
+
+test("ordinary job preview cannot be saved as an AI recommendation", () => {
+  const token = signJobPreview(job, "user-a", { secret, now });
+  assert.equal(
+    verifyRecommendationPreview(token, "user-a", { secret, now }),
     null,
   );
 });

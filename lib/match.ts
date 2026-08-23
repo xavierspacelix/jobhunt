@@ -14,9 +14,9 @@ export type MatchResult = {
 const matchLlmSchema = z
   .object({
     score: z.number().int().min(0).max(100),
-    matchedSkills: z.array(z.string().trim().min(1)),
-    missingSkills: z.array(z.string().trim().min(1)),
-    rationale: z.string(),
+    matchedSkills: z.array(z.string().trim().min(1).max(200)).max(50),
+    missingSkills: z.array(z.string().trim().min(1).max(200)).max(50),
+    rationale: z.string().max(4000),
   })
   .strict();
 
@@ -138,6 +138,7 @@ function collectExperienceText(exp: unknown): string[] {
       "summary",
       "responsibilities",
       "highlights",
+      "period",
     ]) {
       if (typeof o[key] === "string") out.push(o[key] as string);
     }
@@ -153,6 +154,10 @@ function profileContext(profile: Profile): string {
     profile.summary ?? "",
   ];
   return parts.filter(Boolean).join("\n");
+}
+
+function structuredProfileText(value: unknown): string {
+  return Array.isArray(value) ? JSON.stringify(value).slice(0, 8000) : "";
 }
 
 // Extract canonical skill keys from free text using word-boundary matching,
@@ -219,10 +224,11 @@ export function heuristicMatch(profile: Profile, job: Job): MatchResult {
 export async function llmMatch(
   profile: Profile,
   job: Job,
+  options: { timeoutMs?: number } = {},
 ): Promise<MatchResult> {
   const system =
     "You are a strict but fair recruitment matching engine. Respond with STRICT JSON only, no prose. " +
-    "Consider the candidate's FULL profile: listed skills, work experience, and summary. " +
+    "Consider the candidate's FULL profile: CV text, location, skills, work experience, education, certifications, and summary. " +
     "Rules: " +
     "1) A required competency is FULLY matched only if clearly evidenced by an explicit skill, a relevant job title, or a directly relevant experience description. " +
     "2) Do NOT assume one technology implies another (React does NOT imply Node.js; JavaScript knowledge does NOT imply Express.js). " +
@@ -239,10 +245,14 @@ export async function llmMatch(
 
 Candidate profile:
 - Headline: ${profile.headline ?? ""}
+- Location: ${profile.location ?? ""}
 - Summary: ${profile.summary ?? ""}
 - Skills: ${(profile.skills ?? []).join(", ")}
 - Work experience:
 ${collectExperienceText(profile.experience).join("\n") || "(none provided)"}
+- Education: ${structuredProfileText(profile.education) || "(none provided)"}
+- Certifications: ${structuredProfileText(profile.certifications) || "(none provided)"}
+- CV text: ${(profile.rawText ?? "").slice(0, 12_000)}
 
 Job:
 - Title: ${job.title}
@@ -251,7 +261,7 @@ Job:
 - Education: ${job.education ?? ""}
 - Skills: ${(job.skills ?? []).join(", ")}
 - Description: ${(job.description ?? "").slice(0, MATCH_DESCRIPTION_LIMIT)}`;
-  return parseMatchLlmOutput(await callChatJson(system, user));
+  return parseMatchLlmOutput(await callChatJson(system, user, options));
 }
 
 export async function scoreMatch(
@@ -262,8 +272,11 @@ export async function scoreMatch(
     try {
       return await llmMatch(profile, job);
     } catch (err) {
-      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-      console.error(`[match] LLM scoring failed, falling back to heuristic: ${detail}`);
+      const detail =
+        err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      console.error(
+        `[match] LLM scoring failed, falling back to heuristic: ${detail}`,
+      );
     }
   }
   return heuristicMatch(profile, job);

@@ -186,6 +186,14 @@ test("each LLM output parser rejects coercion and extra fields", () => {
       rationale: "Relevant",
     }),
   );
+  assert.throws(() =>
+    parseMatchLlmOutput({
+      score: 80,
+      matchedSkills: Array.from({ length: 51 }, (_, index) => `Skill ${index}`),
+      missingSkills: [],
+      rationale: "Oversized",
+    }),
+  );
   assert.equal(
     parseCoverLetterLlmOutput({ coverLetter: "Dengan hormat" }),
     "Dengan hormat",
@@ -202,6 +210,12 @@ test("each LLM output parser rejects coercion and extra fields", () => {
   );
   assert.throws(() =>
     parseKeywordRecommendation({ keywords: ["React", 4], summary: "Sesuai" }),
+  );
+  assert.throws(() =>
+    parseKeywordRecommendation({
+      keywords: ["A", "B", "C", "D", "E", "F"],
+      summary: "Terlalu banyak peran",
+    }),
   );
 });
 

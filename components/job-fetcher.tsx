@@ -24,9 +24,14 @@ import {
   CheckCircle2Icon,
   XCircleIcon,
   CircleIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SearchEvent } from "@/lib/job-search";
+import {
+  searchRunHasFailed,
+  searchRunHasWarnings,
+  type SearchEvent,
+} from "@/lib/job-search";
 import { MatchDialog } from "@/components/match-dialog";
 
 type Source = "GLINTS" | "JOBSTREET";
@@ -207,9 +212,12 @@ interface ScrapeResult {
     score: number;
     matchedSkills: string[];
     missingSkills: string[];
-    source: "ai" | "heuristic";
+    source: "ai";
+    profileRevision: string;
   };
 }
+
+type SearchDoneEvent = Extract<SearchEvent, { type: "done" }>;
 
 function SourceBadge({ source }: { source: Source }) {
   return (
@@ -403,7 +411,11 @@ export function JobFetcher({
   const [recommendSummary, setRecommendSummary] = React.useState("");
   const [searching, setSearching] = React.useState(false);
   const [searchLog, setSearchLog] = React.useState<
-    { id: number; message: string; kind: "info" | "ok" | "error" | "step" }[]
+    {
+      id: number;
+      message: string;
+      kind: "info" | "ok" | "error" | "warning" | "step";
+    }[]
   >([]);
   const [scrapeResults, setScrapeResults] = React.useState<ScrapeResult[]>([]);
   const [scrapeSaveError, setScrapeSaveError] = React.useState<string | null>(
@@ -414,6 +426,9 @@ export function JobFetcher({
   const [jobsLoading, setJobsLoading] = React.useState(true);
   const [jobsError, setJobsError] = React.useState<string | null>(null);
   const [searchAnnouncement, setSearchAnnouncement] = React.useState("");
+  const [searchCompleted, setSearchCompleted] = React.useState(false);
+  const [searchOutcome, setSearchOutcome] =
+    React.useState<SearchDoneEvent | null>(null);
   const handoffConsumed = React.useRef(false);
 
   const loadJobs = React.useCallback(async () => {
@@ -424,7 +439,9 @@ export function JobFetcher({
       const jobsData = await jobsRes.json();
       const loadedJobs = (jobsData.jobs ?? []) as SavedJob[];
       setJobs(loadedJobs);
-      setTrackedIds(loadedJobs.filter((job) => job.tracked).map((job) => job.id));
+      setTrackedIds(
+        loadedJobs.filter((job) => job.tracked).map((job) => job.id),
+      );
     } catch {
       setJobsError("Lowongan gagal dimuat. Periksa koneksi lalu coba lagi.");
     } finally {
@@ -606,7 +623,9 @@ export function JobFetcher({
         setJobsError(data?.error ?? "Lowongan gagal ditambahkan ke tracker.");
       }
     } catch {
-      setJobsError("Lowongan gagal ditambahkan ke tracker. Periksa koneksi Anda.");
+      setJobsError(
+        "Lowongan gagal ditambahkan ke tracker. Periksa koneksi Anda.",
+      );
     } finally {
       setAddingId(null);
     }
@@ -651,6 +670,7 @@ export function JobFetcher({
   }
 
   async function handleRecommend() {
+    if (recommending || searching) return;
     setRecommending(true);
     setRecommendError(null);
     try {
@@ -659,8 +679,25 @@ export function JobFetcher({
       });
       const data = await res.json();
       if (res.ok) {
-        if (data.keywords?.length) setSearchInput(data.keywords.join(", "));
+        const recommendedKeywords = Array.isArray(data.keywords)
+          ? data.keywords.join(", ")
+          : "";
+        if (!recommendedKeywords) {
+          setRecommendError(
+            "AI tidak menghasilkan peran pencarian yang valid.",
+          );
+          return;
+        }
+        const recommendedLocation = location.trim()
+          ? location
+          : typeof data.location === "string"
+            ? data.location
+            : "";
+        setSearchInput(recommendedKeywords);
+        setLocation(recommendedLocation);
         setRecommendSummary(data.summary ?? "");
+        setRecommending(false);
+        await runSearch(recommendedKeywords, recommendedLocation);
       } else {
         setRecommendError(data.error ?? "Gagal memuat rekomendasi");
       }
@@ -671,9 +708,14 @@ export function JobFetcher({
     }
   }
 
-  async function handleSearch() {
+  async function runSearch(
+    keywords = searchInput,
+    selectedLocation = location,
+  ) {
     if (searching) return;
     setSearching(true);
+    setSearchCompleted(false);
+    setSearchOutcome(null);
     setSearchLog([]);
     setScrapeResults([]);
     setRecommendError(null);
@@ -681,11 +723,12 @@ export function JobFetcher({
     let logId = 0;
     const push = (
       message: string,
-      kind: "info" | "ok" | "error" | "step" = "info",
+      kind: "info" | "ok" | "error" | "warning" | "step" = "info",
     ) => {
       setSearchLog((prev) => [...prev, { id: logId++, message, kind }]);
       setSearchAnnouncement(message);
     };
+    let terminalReceived = false;
 
     const applyEvent = (ev: SearchEvent) => {
       switch (ev.type) {
@@ -697,7 +740,7 @@ export function JobFetcher({
           push(ev.message, "step");
           break;
         case "links":
-          push(ev.message, "info");
+          push(ev.message, ev.failed ? "warning" : "info");
           break;
         case "result":
           setScrapeResults((prev) => [
@@ -709,10 +752,24 @@ export function JobFetcher({
           );
           break;
         case "done":
-          setSearchLog([{ id: -1, message: ev.message, kind: "ok" }]);
+          terminalReceived = true;
+          setSearchLog([
+            {
+              id: -1,
+              message: ev.message,
+              kind: searchRunHasFailed(ev)
+                ? "error"
+                : searchRunHasWarnings(ev)
+                  ? "warning"
+                  : "ok",
+            },
+          ]);
           setSearchAnnouncement(ev.message);
+          setSearchOutcome(ev);
+          setSearchCompleted(true);
           break;
         case "error":
+          terminalReceived = true;
           push(ev.message, "error");
           break;
       }
@@ -722,10 +779,14 @@ export function JobFetcher({
       const res = await fetch("/api/jobs/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ keywords: searchInput, location }),
+        body: JSON.stringify({
+          keywords,
+          location: selectedLocation,
+        }),
       });
       if (!res.ok || !res.body) {
-        push("Gagal memulai pencarian.", "error");
+        const data = await res.json().catch(() => null);
+        push(data?.error ?? "Gagal memulai pencarian.", "error");
         return;
       }
       const reader = res.body.getReader();
@@ -750,6 +811,9 @@ export function JobFetcher({
           }
           applyEvent(ev);
         }
+      }
+      if (!terminalReceived) {
+        push("Pencarian terputus sebelum selesai. Coba lagi.", "error");
       }
     } catch {
       push("Koneksi terputus saat mencari.", "error");
@@ -784,6 +848,31 @@ export function JobFetcher({
   }
 
   const displayJobs = jobs;
+  const allAiScoringFailed = Boolean(
+    searchOutcome &&
+    searchOutcome.inspected > 0 &&
+    searchOutcome.aiFailures === searchOutcome.inspected,
+  );
+  const allSearchPagesFailed = Boolean(
+    searchOutcome &&
+    searchOutcome.searchPages > 0 &&
+    searchOutcome.searchFailures === searchOutcome.searchPages,
+  );
+  const allDetailFetchesFailed = Boolean(
+    searchOutcome &&
+    searchOutcome.details > 0 &&
+    searchOutcome.blocked === searchOutcome.details,
+  );
+  const allQualifiedResultsInvalid = Boolean(
+    searchOutcome &&
+    searchOutcome.results === 0 &&
+    (searchOutcome.invalid ?? 0) > 0,
+  );
+  const searchRunFailed =
+    allAiScoringFailed ||
+    allSearchPagesFailed ||
+    allDetailFetchesFailed ||
+    allQualifiedResultsInvalid;
   const cd = draft?.companyDetails;
   const companyRows = cd
     ? [
@@ -834,27 +923,34 @@ export function JobFetcher({
                 Cari Lowongan (Scrape)
               </h2>
               <p className="text-muted-foreground text-sm">
-                Biarkan AI menyusun kata kunci dari profil CV Anda, atau ketik
-                sendiri. Hasil tidak otomatis tersimpan — pilih yang ingin
-                diambil.
+                Temukan lowongan terbaik dari seluruh profil CV Anda. AI menilai
+                maksimal 30 lowongan dan hanya menampilkan skor minimal 70.
               </p>
             </div>
             <SparklesIcon className="text-accent size-10" />
           </div>
 
           <Button
-            variant="outline"
+            variant="cta"
             className="mt-4"
             onClick={handleRecommend}
-            disabled={recommending}
+            disabled={recommending || searching}
           >
-            {recommending ? (
+            {recommending || searching ? (
               <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
             ) : (
               <SparklesIcon className="size-4" />
             )}
-            {recommending ? "Menganalisis profil…" : "Cari Rekomendasi (AI)"}
+            {recommending
+              ? "Menganalisis CV…"
+              : searching
+                ? "Mencari dan menilai…"
+                : "Cari Rekomendasi Terbaik dari CV"}
           </Button>
+          <p className="text-muted-foreground mt-2 text-xs">
+            AI only · skor minimal 70/100 · maksimal 30 lowongan · tidak
+            tersimpan otomatis
+          </p>
           {recommendError && (
             <p className="text-destructive mt-2 text-sm" role="alert">
               {recommendError}
@@ -883,7 +979,7 @@ export function JobFetcher({
                 disabled={searching}
               />
               <Button
-                onClick={handleSearch}
+                onClick={() => void runSearch()}
                 disabled={searching || !searchInput.trim()}
               >
                 {searching ? (
@@ -960,6 +1056,11 @@ export function JobFetcher({
                         <CheckCircle2Icon className="text-accent size-4" />
                       ) : l.kind === "error" ? (
                         <XCircleIcon className="text-destructive size-4" />
+                      ) : l.kind === "warning" ? (
+                        <TriangleAlertIcon
+                          className="size-4"
+                          style={{ color: "var(--color-warning)" }}
+                        />
                       ) : searching ? (
                         <Loader2Icon className="text-muted-foreground size-4 animate-spin motion-reduce:animate-none" />
                       ) : (
@@ -970,9 +1071,11 @@ export function JobFetcher({
                       className={
                         l.kind === "error"
                           ? "text-destructive"
-                          : l.kind === "ok"
+                          : l.kind === "warning"
                             ? "text-foreground"
-                            : "text-muted-foreground"
+                            : l.kind === "ok"
+                              ? "text-foreground"
+                              : "text-muted-foreground"
                       }
                     >
                       {l.message}
@@ -980,6 +1083,35 @@ export function JobFetcher({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {searchCompleted && scrapeResults.length === 0 && (
+            <div
+              className="border-border bg-background/40 mt-5 rounded-xl border border-dashed p-6 text-center"
+              role={searchRunFailed ? "alert" : "status"}
+            >
+              {searchRunFailed ? (
+                <XCircleIcon className="text-destructive mx-auto size-8" />
+              ) : (
+                <SearchIcon className="text-muted-foreground mx-auto size-8" />
+              )}
+              <p className="text-foreground mt-3 text-sm font-medium">
+                {allAiScoringFailed
+                  ? "AI gagal menilai semua lowongan"
+                  : allSearchPagesFailed
+                    ? "Portal lowongan tidak dapat dijangkau"
+                    : allDetailFetchesFailed
+                      ? "Detail lowongan tidak dapat diambil"
+                      : allQualifiedResultsInvalid
+                        ? "Hasil rekomendasi tidak valid"
+                        : "Belum ada lowongan dengan skor minimal 70"}
+              </p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {searchRunFailed
+                  ? "Coba lagi setelah beberapa saat. Tidak ada skor heuristik yang digunakan."
+                  : "Ubah lokasi atau peran pencarian, lalu coba lagi."}
+              </p>
             </div>
           )}
 
@@ -991,10 +1123,10 @@ export function JobFetcher({
                 </p>
               ) : null}
               <span className="text-foreground text-sm font-medium">
-                Hasil Pencarian ({scrapeResults.length})
+                Rekomendasi Terbaik ({scrapeResults.length})
               </span>
               <ul className="mt-2 flex flex-col gap-3">
-                {scrapeResults.map((r) => {
+                {scrapeResults.map((r, index) => {
                   const saved = savedKeys.includes(r.job.sourceUrl);
                   const key = r.job.sourceUrl;
                   return (
@@ -1005,6 +1137,9 @@ export function JobFetcher({
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                              #{index + 1}
+                            </span>
                             <span className="text-foreground font-medium">
                               {r.job.title}
                             </span>
@@ -1277,9 +1412,16 @@ export function JobFetcher({
       {tab === "saved" && (
         <div>
           {jobsError ? (
-            <div className="border-destructive/40 bg-destructive/10 text-destructive mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm" role="alert">
+            <div
+              className="border-destructive/40 bg-destructive/10 text-destructive mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm"
+              role="alert"
+            >
               <span>{jobsError}</span>
-              <Button variant="outline" size="sm" onClick={() => void loadJobs()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void loadJobs()}
+              >
                 Coba lagi
               </Button>
             </div>
@@ -1294,7 +1436,7 @@ export function JobFetcher({
             <div className="border-border bg-card/50 flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
               <BriefcaseIcon className="text-muted-foreground size-8" />
               <p className="text-muted-foreground text-sm">
-                 Belum ada lowongan tersimpan atau dilacak.
+                Belum ada lowongan tersimpan atau dilacak.
               </p>
             </div>
           ) : (

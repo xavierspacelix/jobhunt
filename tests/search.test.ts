@@ -24,7 +24,9 @@ test("buildSearchUrls caps skills and encodes terms", () => {
 test("buildSearchUrls uses jobstreet host for JOBSTREET", () => {
   const urls = buildSearchUrls(["Data Engineer"], "JOBSTREET")
   assert.equal(urls.length, 1)
-  assert.ok(urls[0].startsWith("https://www.jobstreet.co.id/en/job-search?key="))
+  assert.ok(
+    urls[0].startsWith("https://www.jobstreet.co.id/en/job-search?key="),
+  )
 })
 
 test("buildSearchUrls empty skills returns nothing", () => {
@@ -40,6 +42,21 @@ test("buildSearchUrls appends locationName for Glints", () => {
 test("buildSearchUrls appends where for Jobstreet", () => {
   const urls = buildSearchUrls(["React"], "JOBSTREET", "Surabaya")
   assert.ok(urls[0].includes("where=Surabaya"))
+})
+
+test("buildSearchUrls creates bounded pagination for each role", () => {
+  const urls = buildSearchUrls(
+    ["Frontend Developer", "Backend Engineer"],
+    "GLINTS",
+    undefined,
+    5,
+    2,
+  )
+
+  assert.equal(urls.length, 4)
+  assert.equal(urls[0].includes("page="), false)
+  assert.equal(urls[1].includes("page=2"), true)
+  assert.equal(urls[3].includes("page=2"), true)
 })
 
 test("isJobDetailUrl recognizes glints detail pages", () => {
@@ -71,7 +88,10 @@ test("isJobDetailUrl recognizes jobstreet detail pages", () => {
     true,
   )
   assert.equal(
-    isJobDetailUrl("https://www.jobstreet.co.id/en/job-search?key=x", "JOBSTREET"),
+    isJobDetailUrl(
+      "https://www.jobstreet.co.id/en/job-search?key=x",
+      "JOBSTREET",
+    ),
     false,
   )
 })
@@ -85,6 +105,8 @@ test("extractJobLinks pulls only detail links", () => {
   `
   const links = extractJobLinks(html, "GLINTS", "https://glints.com/id/explore")
   assert.equal(links.length, 2)
-  assert.ok(links.includes("https://glints.com/id/opportunities/jobs/abc-1/share/x"))
+  assert.ok(
+    links.includes("https://glints.com/id/opportunities/jobs/abc-1/share/x"),
+  )
   assert.ok(links.includes("https://glints.com/id/job/foo"))
 })

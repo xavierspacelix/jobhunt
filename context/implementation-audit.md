@@ -1,4 +1,4 @@
-# Implementation Audit - Current Status (2026-08-23)
+# Implementation Audit - Current Status (2026-08-24)
 
 ## Outcome
 
@@ -23,6 +23,11 @@ intent remains defined by the UI docs and MASTER.
   edited submissions are PRIVATE and deduplicated per user.
 - Search saves record provenance through `SavedJob.origin` and Recommendation;
   UI origin resolves to manual, search, or both.
+- CV recommendation search generates role queries from the full Profile, scans a
+  balanced bounded batch, and shows only AI scores of at least 70. Signed previews
+  bind bounded AI output and Profile revision to the job; per-candidate AI
+  failures are omitted rather than replaced with heuristic scores. Save rejects
+  stale profiles and persists all recommendation relations atomically.
 - Scraper URLs are HTTPS-only and source-allowlisted. Native transport pins DNS
   on every redirect hop, blocks special/private addresses and cross-source
   redirects, caps redirects/body/time. Browser fallback pins the exact initial
@@ -62,7 +67,7 @@ intent remains defined by the UI docs and MASTER.
 |---|---|
 | `yarn lint` | pass |
 | `yarn typecheck` | pass |
-| `RUN_DB_TESTS=1 yarn test` | pass, 92/92 across 15 files |
+| `RUN_DB_TESTS=1 yarn test` | pass, 102/102 across 16 files |
 | `yarn build` | pass |
 | `yarn prisma validate` | pass |
 | `yarn prisma migrate status` | pass |

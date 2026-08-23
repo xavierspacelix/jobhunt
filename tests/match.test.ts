@@ -23,7 +23,10 @@ function job(skills: string[]): Job {
 }
 
 test("heuristic match scores full overlap as 100", () => {
-  const r = heuristicMatch(profile(["React", "TypeScript"]), job(["React", "TypeScript"]))
+  const r = heuristicMatch(
+    profile(["React", "TypeScript"]),
+    job(["React", "TypeScript"]),
+  )
   assert.equal(r.score, 100)
   assert.deepEqual(r.matchedSkills.sort(), ["React", "TypeScript"])
   assert.equal(r.missingSkills.length, 0)
@@ -31,7 +34,10 @@ test("heuristic match scores full overlap as 100", () => {
 })
 
 test("heuristic match scores partial overlap proportionally", () => {
-  const r = heuristicMatch(profile(["React", "Vue"]), job(["React", "Angular", "Node.js"]))
+  const r = heuristicMatch(
+    profile(["React", "Vue"]),
+    job(["React", "Angular", "Node.js"]),
+  )
   assert.equal(r.score, Math.round((1 / 3) * 100))
   assert.deepEqual(r.matchedSkills, ["React"])
   assert.deepEqual(r.missingSkills.sort(), ["Angular", "Node.js"])
@@ -107,8 +113,17 @@ test("LLM matching bounds the job description context", async () => {
   try {
     const longJob = job([])
     longJob.description = `${"a".repeat(12_000)}UNSENT_TAIL`
-    await llmMatch(profile([]), longJob)
+    const fullProfile = profile([])
+    fullProfile.location = "Bandung"
+    fullProfile.education = [{ degree: "S1 Informatika" }]
+    fullProfile.certifications = [{ name: "Cloud Practitioner" }]
+    fullProfile.rawText = "Built distributed systems"
+    await llmMatch(fullProfile, longJob)
     assert.doesNotMatch(requestBody, /UNSENT_TAIL/)
+    assert.match(requestBody, /Bandung/)
+    assert.match(requestBody, /S1 Informatika/)
+    assert.match(requestBody, /Cloud Practitioner/)
+    assert.match(requestBody, /Built distributed systems/)
   } finally {
     globalThis.fetch = previousFetch
     if (previousBaseUrl === undefined) delete process.env.LLM_BASE_URL

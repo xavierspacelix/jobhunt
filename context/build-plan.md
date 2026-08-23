@@ -53,7 +53,8 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 
 ### Feature 08: On-demand Job Search & Recommendations
 - Search Glints/Jobstreet only when triggered from `/jobs`
-- Stream progress and scored previews over SSE
+- Generate role searches from the full CV and stream AI-only scored previews over SSE
+- Inspect at most 30 balanced details; show only scores >=70, highest first
 - User explicitly selects results to save as Recommendation
 - No scheduler or cron service
 

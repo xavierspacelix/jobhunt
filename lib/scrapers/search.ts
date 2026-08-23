@@ -14,6 +14,7 @@ export function buildSearchUrls(
   source: JobSource,
   location?: string,
   limit = 5,
+  pages = 1,
 ): string[] {
   const terms = (skills ?? [])
     .map((s) => s.trim())
@@ -23,17 +24,23 @@ export function buildSearchUrls(
   const host = hostFor(source)
   const loc = location?.trim()
   if (source === "GLINTS") {
-    return terms.map((t) => {
-      const params = new URLSearchParams({ keyword: t, country: "ID" })
-      if (loc) params.set("locationName", loc)
-      return `https://${host}/id/opportunities/jobs/explore?${params.toString()}`
-    })
+    return terms.flatMap((t) =>
+      Array.from({ length: Math.max(1, pages) }, (_, index) => {
+        const params = new URLSearchParams({ keyword: t, country: "ID" })
+        if (loc) params.set("locationName", loc)
+        if (index > 0) params.set("page", String(index + 1))
+        return `https://${host}/id/opportunities/jobs/explore?${params.toString()}`
+      }),
+    )
   }
-  return terms.map((t) => {
-    const params = new URLSearchParams({ key: t })
-    if (loc) params.set("where", loc)
-    return `https://www.${host}/en/job-search?${params.toString()}`
-  })
+  return terms.flatMap((t) =>
+    Array.from({ length: Math.max(1, pages) }, (_, index) => {
+      const params = new URLSearchParams({ key: t })
+      if (loc) params.set("where", loc)
+      if (index > 0) params.set("page", String(index + 1))
+      return `https://www.${host}/en/job-search?${params.toString()}`
+    }),
+  )
 }
 
 export function isJobDetailUrl(url: string, source: JobSource): boolean {
@@ -58,9 +65,9 @@ export function extractJobLinks(
   source: JobSource,
   baseUrl: string,
 ): string[] {
-  const hrefs = [
-    ...html.matchAll(/href\s*=\s*["']([^"']+)["']/gi),
-  ].map((m) => m[1])
+  const hrefs = [...html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)].map(
+    (m) => m[1],
+  )
   const out = new Set<string>()
   for (const raw of hrefs) {
     let abs: string
