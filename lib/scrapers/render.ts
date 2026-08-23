@@ -53,21 +53,49 @@ async function nativeFetch(url: string): Promise<NativeResult> {
 function looksBlocked(status: number, html: string): boolean {
   if (status !== 200) return true
   const lower = html.toLowerCase()
-  return /just a moment|cf-chl|cf-browser-verification|enable javascript and cookies to continue|checking your browser/i.test(
+  return /just a moment|cf-chl|cf-browser-verification|cf-mitigated|enable javascript and cookies to continue|checking your browser|you have been blocked|have been blocked|sorry, you have been blocked|attention required|verify you are human|why am i seeing this|access denied|cloudflare/i.test(
     lower,
   )
 }
 
 async function renderLocalBrowser(url: string): Promise<string> {
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-infobars",
+    ],
+  })
   try {
     const context = await browser.newContext({
       userAgent: BROWSER_HEADERS["User-Agent"],
       locale: "id-ID",
+      ignoreHTTPSErrors: true,
+      viewport: { width: 1366, height: 768 },
+    })
+    // Mask the most common automation signals Cloudflare checks.
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false })
+      // @ts-expect-error - injected at runtime
+      window.chrome = { runtime: {}, loadTimes: () => {}, csi: () => {} }
+    })
+    await context.setExtraHTTPHeaders({
+      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+      "sec-ch-ua":
+        '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
     })
     const page = await context.newPage()
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 })
-    await page.waitForTimeout(3000)
+    try {
+      await page.waitForLoadState("networkidle", { timeout: 15000 })
+    } catch {
+      // networkidle may never settle behind a challenge; keep going
+    }
+    await page.waitForTimeout(2500)
     return await page.content()
   } finally {
     await browser.close().catch(() => {})
@@ -81,7 +109,8 @@ export async function fetchRenderedHtml(url: string): Promise<RenderResult> {
   }
   try {
     const html = await renderLocalBrowser(url)
-    if (html && html.length > 0) {
+    // Only treat the browser result as success if it isn't a block page.
+    if (html && html.length > 0 && !looksBlocked(200, html)) {
       return {
         html,
         error: native.error
@@ -93,9 +122,11 @@ export async function fetchRenderedHtml(url: string): Promise<RenderResult> {
   } catch {
     // fall through to native result below
   }
+  // Both attempts blocked (or browser failed): return empty so callers skip
+  // instead of parsing a "Sorry, you have been blocked" page as a job.
   return {
-    html: native.html,
-    error: native.error ?? "Gagal mengambil halaman",
-    method: "native",
+    html: "",
+    error: native.error ?? "Halaman diblokir (bot protection / Cloudflare)",
+    method: native.ok ? "native" : "native",
   }
 }
