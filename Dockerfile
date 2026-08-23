@@ -33,6 +33,13 @@ RUN yarn playwright install --with-deps chromium \
   && mkdir -p /app/uploads/cvs \
   && chown -R nextjs:nodejs /app /ms-playwright
 
+# Pre-download the pinned yarn into a COREPACK_HOME the runtime user can
+# write to, otherwise `yarn` crashes at startup with EACCES on the cache dir.
+ENV COREPACK_HOME=/app/.corepack
+RUN mkdir -p "$COREPACK_HOME" \
+  && corepack prepare yarn@1.22.22 --activate \
+  && chown -R nextjs:nodejs "$COREPACK_HOME"
+
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
