@@ -18,7 +18,10 @@ edit draft, copy, regenerate, dan menyimpan hasilnya.
 ## In Scope
 
 - `POST /api/ai/cover-letter {applicationId}` with ownership check
-- OpenAI-compatible generation with heuristic formal fallback
+- OpenAI-compatible generation memakai **kredensial per-user** (terenkripsi di
+  `Profile`: `llmBaseUrl`/`llmApiKey`/`llmModel`); fallback env global
+  opsional. Tanpa kredensial -> heuristic formal fallback.
+- Pengguna mengatur kredensial LLM di **Settings** (`/settings`).
 - Separate process-local 10/min rate-limit key for cover-letter generation
 - Persist draft in `Application.coverLetter`
 - Editable dialog in tracker
