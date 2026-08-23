@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
 import { z } from "zod"
 import { parseGlints } from "@/lib/scrapers/glints"
 import { parseJobstreet } from "@/lib/scrapers/jobstreet"
@@ -8,12 +9,12 @@ import { SEARCH_HOSTS } from "@/lib/scrapers/search"
 
 export const runtime = "nodejs"
 
-const INGEST_TOKEN = process.env.SCRAPE_INGEST_TOKEN
-
-function corsHeaders() {
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || (process.env.AUTH_URL ?? "*")
   return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   }
 }
@@ -28,22 +29,19 @@ const bodySchema = z.object({
   jobs: z.array(itemSchema).max(50).optional(),
 })
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders() })
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) })
 }
 
-export async function POST(req: Request) {
-  if (!INGEST_TOKEN) {
+// Auth: the caller must be logged in to JobHunter. The browser extension sends
+// the session cookie via `credentials: "include"`; cross-site attachment relies
+// on the session cookie being SameSite=None in production.
+export const POST = auth(async (req) => {
+  const email = req.auth?.user?.email
+  if (!email) {
     return NextResponse.json(
-      { error: "Ingest belum dikonfigurasi (SCRAPE_INGEST_TOKEN)" },
-      { status: 503, headers: corsHeaders() },
-    )
-  }
-  const auth = req.headers.get("authorization") ?? ""
-  if (!auth.startsWith("Bearer ") || auth.slice(7) !== INGEST_TOKEN) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401, headers: corsHeaders() },
+      { error: "Unauthorized", loginRequired: true },
+      { status: 401, headers: corsHeaders(req) },
     )
   }
 
@@ -52,7 +50,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Body tidak valid", issues: parsed.error.flatten() },
-      { status: 400, headers: corsHeaders() },
+      { status: 400, headers: corsHeaders(req) },
     )
   }
 
@@ -65,7 +63,7 @@ export async function POST(req: Request) {
   if (items.length === 0) {
     return NextResponse.json(
       { error: "Tidak ada url/html untuk diproses" },
-      { status: 400, headers: corsHeaders() },
+      { status: 400, headers: corsHeaders(req) },
     )
   }
 
@@ -100,5 +98,5 @@ export async function POST(req: Request) {
     results.push({ url, saved: true, title: job.title })
   }
 
-  return NextResponse.json({ saved, skipped, results }, { headers: corsHeaders() })
-}
+  return NextResponse.json({ saved, skipped, results }, { headers: corsHeaders(req) })
+})

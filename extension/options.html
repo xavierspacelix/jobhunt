@@ -16,13 +16,11 @@
     <h3>Pengaturan JobHunter Capture</h3>
     <label for="appUrl">App URL</label>
     <input id="appUrl" placeholder="https://jobhunt.spacelix.qzz.io" />
-    <label for="token">Token (SCRAPE_INGEST_TOKEN dari .env app)</label>
-    <input id="token" type="password" placeholder="token yang sama dengan env app" />
     <button id="save">Simpan</button>
     <div id="status"></div>
     <p style="font-size:12px;color:#555;margin-top:16px">
-      Token harus sama dengan nilai <code>SCRAPE_INGEST_TOKEN</code> di file
-      <code>.env</code> server JobHunter.
+      Auth memakai sesi JobHunter kamu — pastikan sudah login di app tersebut di
+      browser ini. Jika belum login, extension akan arahkan ke halaman login.
     </p>
     <script src="options.js"></script>
   </body>

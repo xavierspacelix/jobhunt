@@ -20,7 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: SESSION_COOKIE_NAME,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        // `none` in production so the browser-extension (cross-site origin
+        // chrome-extension://...) can attach the session cookie on fetch with
+        // credentials. Requires `secure` (app is HTTPS behind Traefik).
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
