@@ -11,14 +11,12 @@ function setStatus(text, ok) {
 }
 
 captureBtn.onclick = async () => {
-  const { appUrl, token } = await chrome.storage.local.get(["appUrl", "token"])
-  if (!appUrl || !token) {
-    setStatus(
-      "Buka Pengaturan dulu (klik tautan di bawah): isi App URL & Token.",
-      false,
-    )
+  const { appUrl } = await chrome.storage.local.get(["appUrl"])
+  if (!appUrl) {
+    setStatus("Buka Pengaturan dulu (klik tautan di bawah): isi App URL.", false)
     return
   }
+  const base = appUrl.replace(/\/+$/, "")
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id) {
@@ -50,18 +48,22 @@ captureBtn.onclick = async () => {
 
   setStatus("Mengirim…")
   try {
-    const r = await fetch(
-      appUrl.replace(/\/+$/, "") + "/api/scrape/ingest",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        },
-        body: JSON.stringify({ url, html }),
-      },
-    )
+    const r = await fetch(base + "/api/scrape/ingest", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, html }),
+    })
     const data = await r.json().catch(() => ({}))
+
+    if (r.status === 401 || data?.loginRequired) {
+      chrome.tabs.create({ url: base + "/login" })
+      setStatus(
+        "Belum login ke JobHunter. Halaman login dibuka — silakan login, lalu coba lagi.",
+        false,
+      )
+      return
+    }
     if (!r.ok) {
       setStatus("Error: " + (data.error || r.status), false)
       return
