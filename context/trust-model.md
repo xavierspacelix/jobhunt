@@ -63,6 +63,9 @@ pihak ketiga, extension handoff, serta output LLM.
   pins browser fallback to exact-host/same-origin resources.
 - LLM requests are bounded and strict-output parsed. Heuristic fallback and user
   review keep AI advisory rather than authoritative.
+- Recommendation previews sign bounded AI match data and the Profile revision.
+  Save rejects stale profile revisions and writes Job, SavedJob, Recommendation,
+  and Match atomically; client-supplied score data is never trusted.
 - Extension auth is a public-client PKCE flow restricted to the bundled extension
   ID. Codes are hashed, five-minute and single-use; bearer tokens are hashed,
   scoped to job write plus account identity read, extension/installation-bound,

@@ -44,6 +44,12 @@ export const POST = auth(async (req) => {
       { status: 429 },
     );
   }
+  if (!process.env.LLM_API_KEY || !process.env.LLM_BASE_URL) {
+    return NextResponse.json(
+      { error: "AI belum dikonfigurasi untuk pencarian rekomendasi." },
+      { status: 503 },
+    );
+  }
 
   const body = await readBody(req);
   if (!body) {
@@ -71,12 +77,18 @@ export const POST = auth(async (req) => {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true },
+    select: { id: true, profile: { select: { id: true } } },
   });
   if (!user) {
     return NextResponse.json(
       { error: "User tidak ditemukan" },
       { status: 401 },
+    );
+  }
+  if (!user.profile) {
+    return NextResponse.json(
+      { error: "Lengkapi profil atau unggah CV dahulu." },
+      { status: 400 },
     );
   }
 
@@ -92,7 +104,9 @@ export const POST = auth(async (req) => {
             ...e,
             job: {
               ...e.job,
-              previewToken: signJobPreview(trusted.data, user.id),
+              previewToken: signJobPreview(trusted.data, user.id, {
+                match: e.match,
+              }),
             },
           };
         } else {
@@ -111,9 +125,13 @@ export const POST = auth(async (req) => {
           send,
         );
       } catch (err) {
+        console.error(
+          "[job-search] search failed:",
+          err instanceof Error ? err.name : "UnknownError",
+        );
         send({
           type: "error",
-          message: err instanceof Error ? err.message : "Pencarian gagal",
+          message: "Pencarian gagal. Coba lagi.",
         });
       } finally {
         controller.close();

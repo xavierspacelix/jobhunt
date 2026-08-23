@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { prisma } from "../lib/db";
-import { extensionJobsWhere, privateJobDedupeKey } from "../lib/job-data";
+import {
+  extensionJobsWhere,
+  parseTrustedJobPayload,
+  privateJobDedupeKey,
+} from "../lib/job-data";
+import { persistRecommendationPreview } from "../lib/job-recommendation";
 import {
   createPkceS256Challenge,
   generateExtensionSecret,
@@ -80,7 +85,10 @@ test(
           where: { savedBy: { some: { userId: userB.id } } },
         }),
       ]);
-      assert.deepEqual(visibleA.map(({ id }) => id), [job.id]);
+      assert.deepEqual(
+        visibleA.map(({ id }) => id),
+        [job.id],
+      );
       assert.deepEqual(visibleB, []);
       assert.ok(
         await prisma.job.findFirst({
@@ -116,7 +124,100 @@ test(
       if (jobIds.length) {
         await prisma.job.deleteMany({ where: { id: { in: jobIds } } });
       }
-      await prisma.user.deleteMany({ where: { email: { in: [emailA, emailB] } } });
+      await prisma.user.deleteMany({
+        where: { email: { in: [emailA, emailB] } },
+      });
+    }
+  },
+);
+
+test(
+  "recommendation save atomically persists signed AI match and rejects stale profiles",
+  { skip: process.env.RUN_DB_TESTS !== "1" },
+  async () => {
+    const suffix = randomUUID();
+    const email = `recommendation-${suffix}@example.test`;
+    const sourceUrl = `https://glints.com/id/jobs/recommendation-${suffix}`;
+    const staleSourceUrl = `https://glints.com/id/jobs/stale-${suffix}`;
+
+    try {
+      const user = await prisma.user.create({ data: { email } });
+      const profile = await prisma.profile.create({
+        data: { userId: user.id, skills: ["TypeScript"] },
+      });
+      const parsed = parseTrustedJobPayload({
+        title: "Backend Engineer",
+        company: "JobHunter Test",
+        source: "GLINTS",
+        sourceUrl,
+        skills: ["TypeScript", "PostgreSQL"],
+      });
+      assert.equal(parsed.success, true);
+      if (!parsed.success) throw new Error("Test job must be valid");
+
+      const job = await persistRecommendationPreview(user.id, {
+        job: parsed.data,
+        match: {
+          score: 87,
+          matchedSkills: ["TypeScript"],
+          missingSkills: ["PostgreSQL"],
+          source: "ai",
+          profileRevision: profile.updatedAt.toISOString(),
+        },
+      });
+      assert.ok(job);
+
+      const [recommendation, savedJob, match] = await Promise.all([
+        prisma.recommendation.findUnique({
+          where: { userId_jobId: { userId: user.id, jobId: job.id } },
+        }),
+        prisma.savedJob.findUnique({
+          where: { userId_jobId: { userId: user.id, jobId: job.id } },
+        }),
+        prisma.match.findUnique({
+          where: { userId_jobId: { userId: user.id, jobId: job.id } },
+        }),
+      ]);
+      assert.equal(recommendation?.score, 87);
+      assert.equal(savedJob?.origin, "SEARCH");
+      assert.equal(match?.score, 87);
+      assert.equal(match?.source, "ai");
+
+      await prisma.profile.update({
+        where: { userId: user.id },
+        data: {
+          headline: "Updated profile",
+          updatedAt: new Date(profile.updatedAt.getTime() + 1000),
+        },
+      });
+      const staleJob = parseTrustedJobPayload({
+        ...parsed.data,
+        sourceUrl: staleSourceUrl,
+      });
+      assert.equal(staleJob.success, true);
+      if (!staleJob.success) throw new Error("Stale test job must be valid");
+      assert.equal(
+        await persistRecommendationPreview(user.id, {
+          job: staleJob.data,
+          match: {
+            score: 90,
+            matchedSkills: ["TypeScript"],
+            missingSkills: [],
+            source: "ai",
+            profileRevision: profile.updatedAt.toISOString(),
+          },
+        }),
+        null,
+      );
+      assert.equal(
+        await prisma.job.findUnique({ where: { dedupeKey: staleSourceUrl } }),
+        null,
+      );
+    } finally {
+      await prisma.job.deleteMany({
+        where: { sourceUrl: { in: [sourceUrl, staleSourceUrl] } },
+      });
+      await prisma.user.deleteMany({ where: { email } });
     }
   },
 );
@@ -194,7 +295,10 @@ test(
 
       const connectionA = await prisma.extensionConnection.findUniqueOrThrow({
         where: {
-          userId_installationId: { userId: user.id, installationId: installationA },
+          userId_installationId: {
+            userId: user.id,
+            installationId: installationA,
+          },
         },
       });
       await prisma.extensionConnection.update({
@@ -209,7 +313,10 @@ test(
       assert.equal(expiredToken.status, 401);
       await prisma.extensionConnection.update({
         where: { id: connectionA.id },
-        data: { expiresAt: new Date(Date.now() + 60_000), revokedAt: new Date() },
+        data: {
+          expiresAt: new Date(Date.now() + 60_000),
+          revokedAt: new Date(),
+        },
       });
       const revokedToken = await getExtensionAccount(
         extensionRequest("/api/extension/me", {

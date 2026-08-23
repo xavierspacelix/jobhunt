@@ -4,15 +4,23 @@ import { assertPublicHostname } from "@/lib/ssrf"
 import { fetchRenderedHtml, type RenderResult } from "@/lib/scrapers/render"
 import { parseGlints } from "@/lib/scrapers/glints"
 import { parseJobstreet } from "@/lib/scrapers/jobstreet"
-import { buildSearchUrls, extractJobLinks, SEARCH_HOSTS } from "@/lib/scrapers/search"
-import { scoreMatch } from "@/lib/match"
+import {
+  buildSearchUrls,
+  extractJobLinks,
+  SEARCH_HOSTS,
+} from "@/lib/scrapers/search"
+import { llmMatch } from "@/lib/match"
 import type { MatchResult } from "@/lib/match"
 import type { JobSource, ParsedFields } from "@/lib/scrapers/types"
+import { parseTrustedJobPayload } from "@/lib/job-data"
 
-export const BATCH_LIMIT = 20
+export const BATCH_LIMIT = 30
+export const HIGH_SCORE_THRESHOLD = 70
+export const SEARCH_PAGES = 2
 const MIN_INTERVAL_MS = 1500
 const MAX_RETRIES = 3
 const BASE_BACKOFF_MS = 5000
+const SEARCH_MATCH_TIMEOUT_MS = 25_000
 export const MAX_AGE_DAYS = 30
 
 export type ScrapedJob = NonNullable<ReturnType<typeof toJobData>>
@@ -21,16 +29,36 @@ export type MatchPreview = {
   score: number
   matchedSkills: string[]
   missingSkills: string[]
-  source: "ai" | "heuristic"
+  source: "ai"
+  profileRevision: string
 }
 
 export type SearchEvent =
   | { type: "start" }
   | { type: "search"; source: JobSource; message: string }
-  | { type: "links"; source: JobSource; count: number; message: string }
+  | {
+      type: "links"
+      source: JobSource
+      count: number
+      failed?: boolean
+      message: string
+    }
   | { type: "detail"; current: number; total: number; message: string }
   | { type: "result"; job: ScrapedJob; match: MatchPreview }
-  | { type: "done"; collected: number; results: number; filtered?: number; blocked?: number; message: string }
+  | {
+      type: "done"
+      collected: number
+      details: number
+      inspected: number
+      results: number
+      filtered?: number
+      blocked?: number
+      aiFailures?: number
+      searchFailures?: number
+      searchPages: number
+      invalid?: number
+      message: string
+    }
   | { type: "error"; message: string }
 
 function sourceLabel(source: JobSource): string {
@@ -196,17 +224,76 @@ export interface SearchOptions {
   onlyOpen?: boolean
 }
 
+type DoneEvent = Extract<SearchEvent, { type: "done" }>
+
+export function searchRunHasFailed(event: DoneEvent): boolean {
+  const allAiFailed =
+    event.inspected > 0 && event.aiFailures === event.inspected
+  const allDetailsFailed = event.details > 0 && event.blocked === event.details
+  const allSearchPagesFailed =
+    event.searchPages > 0 && event.searchFailures === event.searchPages
+  const allQualifiedInvalid = event.results === 0 && (event.invalid ?? 0) > 0
+  return (
+    allAiFailed ||
+    allDetailsFailed ||
+    allSearchPagesFailed ||
+    allQualifiedInvalid
+  )
+}
+
+export function searchRunHasWarnings(event: DoneEvent): boolean {
+  return (
+    searchRunHasFailed(event) ||
+    (event.aiFailures ?? 0) > 0 ||
+    (event.blocked ?? 0) > 0 ||
+    (event.searchFailures ?? 0) > 0 ||
+    (event.invalid ?? 0) > 0
+  )
+}
+
+export function selectBalancedTargets(
+  collected: Record<JobSource, string[]>,
+  limit = BATCH_LIMIT,
+): string[] {
+  const selected: string[] = []
+  const seen = new Set<string>()
+  const perSource = Math.floor(limit / 2)
+
+  for (const source of ["GLINTS", "JOBSTREET"] as const) {
+    for (const url of collected[source].slice(0, perSource)) {
+      if (!seen.has(url)) {
+        seen.add(url)
+        selected.push(url)
+      }
+    }
+  }
+
+  for (const source of ["GLINTS", "JOBSTREET"] as const) {
+    for (const url of collected[source].slice(perSource)) {
+      if (selected.length >= limit) return selected
+      if (!seen.has(url)) {
+        seen.add(url)
+        selected.push(url)
+      }
+    }
+  }
+  return selected
+}
+
 export async function runJobSearch(
   userId: string,
   keywords: string[],
   opts: SearchOptions = {},
   onProgress?: (e: SearchEvent) => void,
 ): Promise<{ collected: number; results: number; filtered: number }> {
-  const profile = await prisma.profile
-    .findUnique({ where: { userId } })
-    .catch(() => null)
+  const profile = await prisma.profile.findUnique({ where: { userId } })
   const sources: JobSource[] = ["GLINTS", "JOBSTREET"]
-  const collected = new Set<string>()
+  const collected: Record<JobSource, Set<string>> = {
+    GLINTS: new Set<string>(),
+    JOBSTREET: new Set<string>(),
+  }
+  let searchFailures = 0
+  let searchPages = 0
 
   for (const source of sources) {
     onProgress?.({
@@ -214,12 +301,19 @@ export async function runJobSearch(
       source,
       message: `Mencari di ${sourceLabel(source)}…`,
     })
-    const searchUrls = buildSearchUrls(keywords, source, opts.location ?? undefined)
+    const searchUrls = buildSearchUrls(
+      keywords,
+      source,
+      opts.location ?? undefined,
+      5,
+      SEARCH_PAGES,
+    )
     for (const su of searchUrls) {
+      searchPages++
       const res = await fetchWithBackoff(su)
       if (res?.html) {
         const links = extractJobLinks(res.html, source, su)
-        links.forEach((l) => collected.add(l))
+        links.forEach((l) => collected[source].add(l))
         onProgress?.({
           type: "links",
           source,
@@ -227,18 +321,23 @@ export async function runJobSearch(
           message: `${links.length} lowongan ditemukan di ${sourceLabel(source)}`,
         })
       } else {
+        searchFailures++
         onProgress?.({
           type: "links",
           source,
           count: 0,
-          message: `Tidak ada hasil dari ${sourceLabel(source)}`,
+          failed: true,
+          message: `Gagal mengambil halaman hasil dari ${sourceLabel(source)}`,
         })
       }
       await sleep(MIN_INTERVAL_MS)
     }
   }
 
-  const targets = [...collected].slice(0, BATCH_LIMIT)
+  const targets = selectBalancedTargets({
+    GLINTS: [...collected.GLINTS],
+    JOBSTREET: [...collected.JOBSTREET],
+  })
   let filtered = 0
   let blocked = 0
   const candidates: ScrapedJob[] = []
@@ -264,9 +363,15 @@ export async function runJobSearch(
     if (data) {
       if (onlyOpen && data.closed) {
         filtered++
-      } else if (data.postedAt && Date.now() - data.postedAt.getTime() > maxAgeDays * 86400000) {
+      } else if (
+        data.postedAt &&
+        Date.now() - data.postedAt.getTime() > maxAgeDays * 86400000
+      ) {
         filtered++
-      } else if (opts.location && !locationMatches(opts.location, data.location)) {
+      } else if (
+        opts.location &&
+        !locationMatches(opts.location, data.location)
+      ) {
         filtered++
       } else {
         candidates.push(data)
@@ -277,11 +382,11 @@ export async function runJobSearch(
     await sleep(MIN_INTERVAL_MS)
   }
 
-  // LLM contribution: score every candidate against the profile. Uses the AI
-  // model when LLM_API_KEY/LLM_BASE_URL are set, otherwise falls back to the
-  // heuristic matcher. Scored with bounded concurrency so a large batch of
-  // results doesn't fire dozens of model calls at once.
+  // Score every candidate with AI only. Per-job failures are omitted so one
+  // provider error does not discard successful recommendations.
   let results = 0
+  let aiFailures = 0
+  let invalid = 0
   if (candidates.length > 0) {
     onProgress?.({
       type: "search",
@@ -291,24 +396,42 @@ export async function runJobSearch(
         : "Menyiapkan hasil…",
     })
     const scored = await scoreCandidates(profile as Profile | null, candidates)
-    for (const { job, match } of scored) {
+    for (const { job, match } of scored.matches) {
+      if (!parseTrustedJobPayload(job).success) {
+        invalid++
+        continue
+      }
       results++
       onProgress?.({ type: "result", job, match })
     }
+    aiFailures = scored.failures
   }
 
-  const filteredNote = filtered ? `, ${filtered} difilter (lokasi/tanggal/tutup)` : ""
+  const filteredNote = filtered
+    ? `, ${filtered} difilter (lokasi/tanggal/tutup)`
+    : ""
   const blockedNote = blocked ? `, ${blocked} diblokir bot protection` : ""
-  const aiNote = profile ? " (skor dari AI)" : ""
+  const aiFailureNote = aiFailures ? `, ${aiFailures} gagal dinilai AI` : ""
+  const searchFailureNote = searchFailures
+    ? `, ${searchFailures} halaman pencarian gagal diambil`
+    : ""
+  const invalidNote = invalid ? `, ${invalid} hasil tidak valid diabaikan` : ""
+  const collectedCount = collected.GLINTS.size + collected.JOBSTREET.size
   onProgress?.({
     type: "done",
-    collected: collected.size,
+    collected: collectedCount,
+    details: targets.length,
+    inspected: candidates.length,
     results,
     filtered,
     blocked,
-    message: `Selesai — ${results} lowongan ditemukan${filteredNote}${blockedNote}${aiNote}. Pilih yang ingin disimpan.`,
+    aiFailures,
+    searchFailures,
+    searchPages,
+    invalid,
+    message: `Selesai — ${results} lowongan dengan skor minimal ${HIGH_SCORE_THRESHOLD}${filteredNote}${blockedNote}${aiFailureNote}${searchFailureNote}${invalidNote}. Pilih yang ingin disimpan.`,
   })
-  return { collected: collected.size, results, filtered }
+  return { collected: collectedCount, results, filtered }
 }
 
 async function mapWithConcurrency<T, R>(
@@ -330,36 +453,47 @@ async function mapWithConcurrency<T, R>(
   return out
 }
 
+export function rankQualifiedMatches<T extends { match: MatchPreview }>(
+  matches: T[],
+  threshold = HIGH_SCORE_THRESHOLD,
+): T[] {
+  return matches
+    .filter((result) => result.match.score >= threshold)
+    .sort((a, b) => b.match.score - a.match.score)
+}
+
 async function scoreCandidates(
   profile: Profile | null,
   candidates: ScrapedJob[],
-): Promise<{ job: ScrapedJob; match: MatchPreview }[]> {
-  if (!profile) {
-    return candidates.map((job) => ({
-      job,
-      match: { score: 0, matchedSkills: [], missingSkills: [], source: "heuristic" },
-    }))
-  }
-  return mapWithConcurrency(candidates, 4, async (job) => {
-    let m: MatchResult
+): Promise<{
+  matches: { job: ScrapedJob; match: MatchPreview }[]
+  failures: number
+}> {
+  if (!profile) return { matches: [], failures: candidates.length }
+  const scored = await mapWithConcurrency(candidates, 4, async (job) => {
     try {
-      m = await scoreMatch(profile, job as unknown as Job)
-    } catch {
-      m = {
-        score: 0,
-        matchedSkills: [],
-        missingSkills: job.skills,
-        source: "heuristic",
+      const m: MatchResult = await llmMatch(profile, job as unknown as Job, {
+        timeoutMs: SEARCH_MATCH_TIMEOUT_MS,
+      })
+      return {
+        job,
+        match: {
+          score: m.score,
+          matchedSkills: m.matchedSkills,
+          missingSkills: m.missingSkills,
+          source: "ai" as const,
+          profileRevision: profile.updatedAt.toISOString(),
+        },
       }
-    }
-    return {
-      job,
-      match: {
-        score: m.score,
-        matchedSkills: m.matchedSkills,
-        missingSkills: m.missingSkills,
-        source: m.source,
-      },
+    } catch {
+      return null
     }
   })
+  const successful = scored.filter(
+    (result): result is NonNullable<typeof result> => result !== null,
+  )
+  return {
+    matches: rankQualifiedMatches(successful),
+    failures: scored.length - successful.length,
+  }
 }

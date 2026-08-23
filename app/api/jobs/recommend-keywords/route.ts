@@ -2,17 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { callChatJson } from "@/lib/llm";
-import { profileKeywords } from "@/lib/job-search";
 import { parseKeywordRecommendation } from "@/lib/recommend-keywords";
 import { recommendKeywordsRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
-
-interface ExperienceEntry {
-  role?: string;
-  company?: string;
-  period?: string;
-}
 
 export const POST = auth(async (req) => {
   const email = req.auth?.user?.email;
@@ -35,6 +28,10 @@ export const POST = auth(async (req) => {
           headline: true,
           summary: true,
           experience: true,
+          education: true,
+          certifications: true,
+          location: true,
+          rawText: true,
         },
       },
     },
@@ -49,21 +46,27 @@ export const POST = auth(async (req) => {
       { status: 400 },
     );
   }
+  if (!process.env.LLM_API_KEY || !process.env.LLM_BASE_URL) {
+    return NextResponse.json(
+      { error: "AI belum dikonfigurasi untuk pencarian rekomendasi." },
+      { status: 503 },
+    );
+  }
 
-  let keywords: string[] = [];
-  let summary = "";
-  if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
-    try {
-      const system =
-        "You are a career recommendation assistant for job seekers in Indonesia. Respond with STRICT JSON only, no prose.";
-      const experienceText = Array.isArray(profile.experience)
-        ? (profile.experience as ExperienceEntry[])
-            .map((e) => e.role)
-            .filter(Boolean)
-            .join(", ")
-        : "";
-      const userPrompt = `Berdasarkan SELURUH profil kandidat (bukan hanya skill), usulkan maksimal 10 kata kunci pencarian lowongan (peran, skill, lokasi, atau tipe kerja seperti Remote) yang memaksimalkan kecocokan, serta ringkasan singkat (1-2 kalimat) dalam Bahasa Indonesia yang menjelaskan rekomendasinya.
-Pertimbangkan headline, ringkasan, skill, DAN pengalaman kerja (termasuk peran lampau) untuk menangkap minat dan arah karier kandidat.
+  try {
+    const system =
+      "You are a career recommendation assistant for job seekers in Indonesia. Respond with STRICT JSON only, no prose.";
+    const experienceText = Array.isArray(profile.experience)
+      ? JSON.stringify(profile.experience).slice(0, 8000)
+      : "";
+    const educationText = Array.isArray(profile.education)
+      ? JSON.stringify(profile.education).slice(0, 8000)
+      : "";
+    const certificationText = Array.isArray(profile.certifications)
+      ? JSON.stringify(profile.certifications).slice(0, 4000)
+      : "";
+    const userPrompt = `Berdasarkan SELURUH profil kandidat, usulkan maksimal 5 kata kunci berupa NAMA POSISI atau PERAN yang lazim dipakai di Glints/Jobstreet dan paling mungkin menghasilkan kecocokan tinggi. Jangan masukkan lokasi, tipe kerja, atau skill tunggal sebagai kata kunci. Berikan ringkasan singkat (1-2 kalimat) dalam Bahasa Indonesia.
+Pertimbangkan headline, ringkasan, skill, pengalaman kerja, pendidikan, dan lokasi kandidat.
 Kembalikan JSON dengan bentuk persis:
 { "keywords": string[], "summary": string }
 
@@ -72,23 +75,26 @@ Profil:
 - Summary: ${profile.summary ?? ""}
 - Skills: ${(profile.skills ?? []).join(", ")}
 - Pengalaman: ${experienceText || "(kosong)"}
+- Pendidikan: ${educationText || "(kosong)"}
+- Sertifikasi: ${certificationText || "(kosong)"}
+- Lokasi: ${profile.location ?? ""}
+- Teks CV: ${(profile.rawText ?? "").slice(0, 8000)}
 
-Gunakan kata kunci seperti lazim di job board (Glints/Jobstreet), mis. "Frontend Developer", "React", "Jakarta", "Remote".`;
+Contoh bentuk kata kunci: "Frontend Developer", "Backend Engineer", atau "Full Stack Developer".`;
 
-      const parsed = parseKeywordRecommendation(
-        await callChatJson(system, userPrompt),
-      );
-      keywords = parsed.keywords;
-      summary = parsed.summary;
-    } catch (err) {
-      console.error("[recommend-keywords] LLM gagal:", err);
-    }
+    const parsed = parseKeywordRecommendation(
+      await callChatJson(system, userPrompt),
+    );
+    return NextResponse.json({
+      keywords: parsed.keywords,
+      summary: parsed.summary,
+      location: profile.location ?? "",
+    });
+  } catch (err) {
+    console.error("[recommend-keywords] LLM gagal:", err);
+    return NextResponse.json(
+      { error: "AI gagal menyusun strategi pencarian. Coba lagi." },
+      { status: 502 },
+    );
   }
-
-  if (keywords.length === 0) {
-    keywords = profileKeywords(profile);
-    summary = `Rekomendasi dari profil Anda (skill, headline, & pengalaman): ${keywords.join(", ")}.`;
-  }
-
-  return NextResponse.json({ keywords, summary });
 });

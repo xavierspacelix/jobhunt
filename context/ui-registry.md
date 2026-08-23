@@ -85,6 +85,9 @@ File: `components/job-fetcher.tsx`
 
 ### Search And Async Feedback
 
+- Primary CV action uses the shared `cta` button and starts role generation plus
+  search as one flow. Supporting copy states `AI only`, minimum 70/100, maximum
+  30 jobs, and no automatic persistence.
 - Keyword and location remain editable before search; location chips are
   `min-h-11 rounded-full border px-3 py-2 text-xs font-medium`, use
   `aria-pressed`, and pair active state with semantic background and text.
@@ -97,6 +100,12 @@ File: `components/job-fetcher.tsx`
   load failure includes an inline `Coba lagi` action.
 - Search results are previews until the explicit `Simpan` action succeeds;
   loading and saved states remain visible in the button label.
+- Qualified results are rendered highest-score first with a mono `#N` rank.
+  Completed zero-result searches use a dashed semantic empty surface with one
+  explanation and one next action; failures do not masquerade as empty success.
+- Partial source/AI failures use a visible warning icon and completion copy. Full
+  AI or portal failure uses a destructive icon plus `role="alert"`; true empty
+  success keeps the neutral search icon and `role="status"`.
 
 ### Match Score
 

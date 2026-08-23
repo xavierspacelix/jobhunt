@@ -523,6 +523,7 @@ export async function extractCv(text: string): Promise<{
 export async function callChatJson(
   system: string,
   user: string,
+  options: { timeoutMs?: number } = {},
 ): Promise<unknown> {
   const baseUrl = process.env.LLM_BASE_URL!.replace(/\/$/, "");
   const apiKey = process.env.LLM_API_KEY!;
@@ -543,7 +544,7 @@ export async function callChatJson(
         { role: "user", content: user },
       ],
     }),
-    signal: AbortSignal.timeout(getLlmTimeoutMs()),
+    signal: AbortSignal.timeout(options.timeoutMs ?? getLlmTimeoutMs()),
   });
 
   if (!res.ok) {

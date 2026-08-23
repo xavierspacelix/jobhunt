@@ -40,6 +40,9 @@ deferred under OD-003 and is not represented as delivered.
 - Paste-URL and on-demand search use native fetch with local Playwright fallback.
 - Feature 08 has no cron: search streams previews, then user explicitly saves a
   selected result as a Recommendation.
+- CV recommendations generate up to five role queries with AI, inspect at most
+  30 balanced Glints/Jobstreet details, and show only AI scores >=70 descending;
+  per-candidate AI failures are omitted without heuristic substitution.
 - Signed previews control SHARED Job refresh; unsigned/edited manual data is
   PRIVATE and SavedJob controls user visibility/provenance.
 - Extension capture uses allowlisted-ID PKCE, independent per-browser tokens,
@@ -54,7 +57,7 @@ Full outcomes: `open-decisions.md`. Current implementation: `architecture.md`.
 - OD-003: sender domain/key required before email sending can be promoted.
 - Feature 08 live end-to-end needs deployed Docker + reachable PostgreSQL +
   external network access to Glints/Jobstreet.
-- Verified: lint, typecheck, and build pass; 92/92 tests in 15 files pass with
+- Verified: lint, typecheck, and build pass; 102/102 tests in 16 files pass with
   `RUN_DB_TESTS=1`; Prisma validate/status and extension ZIP integrity pass.
 - Docker command is unavailable locally, so no image smoke is claimed. There is
   no format gate or browser E2E suite.

@@ -8,12 +8,23 @@ import {
 
 const PREVIEW_TTL_MS = 15 * 60 * 1000;
 
+const matchPreviewSchema = z
+  .object({
+    score: z.number().int().min(0).max(100),
+    matchedSkills: z.array(z.string().trim().min(1).max(200)).max(50),
+    missingSkills: z.array(z.string().trim().min(1).max(200)).max(50),
+    source: z.literal("ai"),
+    profileRevision: z.string().datetime(),
+  })
+  .strict();
+
 const previewClaimsSchema = z
   .object({
     version: z.literal(1),
     userId: z.string().min(1).max(200),
     expiresAt: z.number().int().positive(),
     job: trustedJobPayloadSchema,
+    match: matchPreviewSchema.optional(),
   })
   .strict();
 
@@ -21,7 +32,13 @@ interface PreviewOptions {
   secret?: string;
   now?: number;
   ttlMs?: number;
+  match?: z.infer<typeof matchPreviewSchema>;
 }
+
+export type RecommendationPreview = {
+  job: TrustedJobPayload;
+  match: z.infer<typeof matchPreviewSchema>;
+};
 
 function resolveSecret(secret?: string): string {
   const value = secret ?? process.env.AUTH_SECRET;
@@ -43,16 +60,33 @@ export function signJobPreview(
     userId,
     expiresAt: (options.now ?? Date.now()) + (options.ttlMs ?? PREVIEW_TTL_MS),
     job,
+    match: options.match,
   });
   const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
   return `${payload}.${signature(payload, resolveSecret(options.secret)).toString("base64url")}`;
 }
 
-export function verifyJobPreview(
+export function verifyRecommendationPreview(
   token: string,
   userId: string,
   options: PreviewOptions = {},
-): TrustedJobPayload | null {
+): RecommendationPreview | null {
+  const claims = verifyPreviewClaims(token, userId, options);
+  return claims?.match ? { job: claims.job, match: claims.match } : null;
+}
+
+export function recommendationPreviewMatchesProfile(
+  preview: RecommendationPreview,
+  profileUpdatedAt: Date,
+): boolean {
+  return preview.match.profileRevision === profileUpdatedAt.toISOString();
+}
+
+function verifyPreviewClaims(
+  token: string,
+  userId: string,
+  options: PreviewOptions,
+): z.infer<typeof previewClaimsSchema> | null {
   const [payload, suppliedText, ...rest] = token.split(".");
   if (!payload || !suppliedText || rest.length > 0) return null;
 
@@ -64,7 +98,9 @@ export function verifyJobPreview(
     supplied = Buffer.alloc(expected.length);
   }
   const comparable =
-    supplied.length === expected.length ? supplied : Buffer.alloc(expected.length);
+    supplied.length === expected.length
+      ? supplied
+      : Buffer.alloc(expected.length);
   const validSignature = timingSafeEqual(expected, comparable);
   if (!validSignature || supplied.length !== expected.length) return null;
 
@@ -72,11 +108,22 @@ export function verifyJobPreview(
     const claims = previewClaimsSchema.parse(
       JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
     );
-    if (claims.userId !== userId || claims.expiresAt <= (options.now ?? Date.now())) {
+    if (
+      claims.userId !== userId ||
+      claims.expiresAt <= (options.now ?? Date.now())
+    ) {
       return null;
     }
-    return claims.job;
+    return claims;
   } catch {
     return null;
   }
+}
+
+export function verifyJobPreview(
+  token: string,
+  userId: string,
+  options: PreviewOptions = {},
+): TrustedJobPayload | null {
+  return verifyPreviewClaims(token, userId, options)?.job ?? null;
 }

@@ -137,20 +137,29 @@ Compose mounts `/app/uploads`; MinIO remains preferred for object storage.
 
 1. `POST /api/jobs/search` accepts keywords/location and returns SSE events:
    `start`, `search`, `links`, `detail`, `result`, `done`, or `error`.
-2. Empty keywords fall back to Profile skills/headline/experience roles.
-3. Input accepts ten normalized keywords; search URLs currently use the first
-   five for each source.
+2. One-click CV recommendations use the LLM to derive up to five role/title
+   queries from headline, summary, skills, experience, education, certifications,
+   location, and bounded raw CV text;
+   manual empty keywords still fall back to Profile fields.
+3. Input accepts ten normalized keywords; search URLs use the first five and up
+   to two result pages for each source/query.
 4. Glints and Jobstreet result pages are processed sequentially; detail links
-   are deduplicated and capped at 20 per run.
+   are deduplicated and capped at 30 per run with a 15/source target and backfill.
 5. Closed jobs, jobs older than 30 days, and location mismatches are filtered.
-6. Candidate details are scored with concurrency four and streamed as previews.
-7. Result events include user-bound signed preview tokens. Search writes no DB
-   rows; explicit selection calls `/api/jobs/recommendations`.
+6. Candidate details are scored AI-only with concurrency four and a 25-second
+   per-candidate timeout. Per-candidate AI failures are omitted; scores below 70
+   are filtered and results sort descending. Qualified payloads are validated
+   before result counts/events; invalid payloads are omitted and reported.
+7. Result events include user-bound signed preview tokens containing both trusted
+   Job data, bounded AI match data, and the Profile revision used for scoring.
+   Search writes no DB rows; explicit selection calls `/api/jobs/recommendations`,
+   which rejects changed profiles and atomically persists Job, SavedJob,
+   Recommendation, and Match without re-scoring.
 8. Recommendation save accepts only a valid token and upserts SHARED Job,
    SavedJob, Recommendation, and optionally Match. `GET /api/jobs` returns only
    user-visible rows with manual/search/both provenance.
 
-Network limits are batch 20, minimum interval 1.5 seconds, and 429 retry delays
+Network limits are batch 30, minimum interval 1.5 seconds, and 429 retry delays
 of 5/10/20 seconds.
 
 ## Matching and Cover Letter
@@ -163,6 +172,9 @@ of 5/10/20 seconds.
 - LLM requests use `LLM_BASE_URL`, `LLM_API_KEY`, optional `LLM_MODEL` and
   bounded `LLM_TIMEOUT_MS` (120-second default),
   temperature 0.2, and JSON mode. Heuristic fallback is available.
+- CV-to-job AI matching includes bounded raw CV text plus structured location,
+  skills, experience, education, and certifications. Match arrays and strings are
+  bounded before they can enter a signed recommendation preview.
 - `POST /api/ai/cover-letter` generates and stores a formal Indonesian draft in
   `Application.coverLetter`.
 - Email sending and EmailLog creation are deferred and not implemented.
