@@ -4,7 +4,9 @@ import {
   BATCH_LIMIT,
   parseKeywords,
   toJobData,
+  locationMatches,
 } from "../lib/job-search"
+import { isClosedFromText } from "../lib/scrapers/shared"
 import type { ParsedFields } from "../lib/scrapers/types"
 
 function fields(overrides: Partial<ParsedFields> = {}): ParsedFields {
@@ -67,4 +69,30 @@ test("toJobData normalizes blank fields and invalid dates", () => {
   assert.equal(data!.salary, null)
   assert.equal(data!.postedAt, null)
   assert.deepEqual(data!.skills, [])
+})
+
+test("locationMatches passes when selection is empty", () => {
+  assert.equal(locationMatches("", "Jakarta"), true)
+  assert.equal(locationMatches(null, "Bandung"), true)
+  assert.equal(locationMatches(undefined, "Surabaya"), true)
+})
+
+test("locationMatches Jakarta matches common variants", () => {
+  assert.equal(locationMatches("Jakarta", "DKI Jakarta"), true)
+  assert.equal(locationMatches("Jakarta", "Jakarta Selatan"), true)
+  assert.equal(locationMatches("Jakarta", "Kota Jakarta Barat"), true)
+  assert.equal(locationMatches("Jakarta", "Bandung"), false)
+})
+
+test("locationMatches remote only matches remote jobs", () => {
+  assert.equal(locationMatches("Remote", "Remote (Indonesia)"), true)
+  assert.equal(locationMatches("Remote", "Jakarta"), false)
+  assert.equal(locationMatches("Jakarta", "Remote"), false)
+})
+
+test("isClosedFromText detects closed listings", () => {
+  assert.equal(isClosedFromText("Lowongan ini sudah ditutup"), true)
+  assert.equal(isClosedFromText("Pendaftaran ditutup besok"), true)
+  assert.equal(isClosedFromText("posisi sudah penuh"), true)
+  assert.equal(isClosedFromText("Masih dibuka, ayo lamar"), false)
 })

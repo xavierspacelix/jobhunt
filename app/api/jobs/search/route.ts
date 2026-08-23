@@ -7,13 +7,22 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
-async function readBodyKeywords(req: Request): Promise<string[] | null> {
+async function readBody(req: Request): Promise<{
+  keywords: string[] | null
+  location?: string
+}> {
   const json = await req.json().catch(() => null)
-  if (!json) return []
-  if (Array.isArray(json.keywords)) return json.keywords
-  if (typeof json.keywords === "string") return json.keywords
-  if (typeof json.query === "string") return json.query
-  return []
+  if (!json) return { keywords: [] }
+  const keywords = Array.isArray(json.keywords)
+    ? json.keywords
+    : typeof json.keywords === "string"
+      ? json.keywords
+      : typeof json.query === "string"
+        ? json.query
+        : []
+  const location =
+    typeof json.location === "string" ? json.location.trim() || undefined : undefined
+  return { keywords, location }
 }
 
 export const POST = auth(async (req) => {
@@ -22,7 +31,8 @@ export const POST = auth(async (req) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  let keywords = parseKeywords(await readBodyKeywords(req))
+  const body = await readBody(req)
+  let keywords = parseKeywords(body.keywords)
   if (keywords.length === 0) {
     const user = await prisma.user.findUnique({
       where: { email },
@@ -51,8 +61,13 @@ export const POST = auth(async (req) => {
       const send = (e: SearchEvent) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`))
       try {
-        send({ type: "start" })
-        await runJobSearch(user.id, keywords, send)
+         send({ type: "start" })
+        await runJobSearch(
+          user.id,
+          keywords,
+          { location: body.location, maxAgeDays: 30, onlyOpen: true },
+          send,
+        )
       } catch (err) {
         send({
           type: "error",

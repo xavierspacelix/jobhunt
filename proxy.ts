@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-cookies";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/profile"];
 
@@ -16,6 +17,7 @@ export async function proxy(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
+    cookieName: SESSION_COOKIE_NAME,
   });
 
   if (!token) {

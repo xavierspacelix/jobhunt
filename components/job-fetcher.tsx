@@ -30,6 +30,15 @@ import { MatchDialog } from "@/components/match-dialog"
 
 type Source = "GLINTS" | "JOBSTREET"
 
+const LOCATION_CHIPS: { label: string; value: string }[] = [
+  { label: "Semua Indonesia", value: "" },
+  { label: "Jakarta", value: "Jakarta" },
+  { label: "Bandung", value: "Bandung" },
+  { label: "Surabaya", value: "Surabaya" },
+  { label: "Tangerang", value: "Tangerang" },
+  { label: "Remote", value: "Remote" },
+]
+
 interface CompanyDetails {
   name?: string | null
   industry?: string | null
@@ -241,6 +250,7 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
   const [searchInput, setSearchInput] = React.useState(
     defaultKeywords?.join(", ") ?? "",
   )
+  const [location, setLocation] = React.useState("")
   const [recommending, setRecommending] = React.useState(false)
   const [recommendError, setRecommendError] = React.useState<string | null>(null)
   const [recommendSummary, setRecommendSummary] = React.useState("")
@@ -460,7 +470,7 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
       const res = await fetch("/api/jobs/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ keywords: searchInput }),
+        body: JSON.stringify({ keywords: searchInput, location }),
       })
       if (!res.ok || !res.body) {
         push("Gagal memulai pencarian.", "error")
@@ -619,7 +629,7 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
             <Input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="mis. React, Node.js, Jakarta, Remote"
+              placeholder="mis. React, Node.js (skill/kata kunci)"
               className="flex-1"
               disabled={searching}
             />
@@ -634,6 +644,47 @@ export function JobFetcher({ defaultKeywords }: { defaultKeywords?: string[] }) 
               )}
               {searching ? "Mencari…" : "Cari"}
             </Button>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <label
+              htmlFor="job-location"
+              className="text-sm font-medium text-foreground"
+            >
+              Lokasi
+            </label>
+            <Input
+              id="job-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="mis. Jakarta, Bandung, Remote"
+              className="flex-1"
+              disabled={searching}
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {LOCATION_CHIPS.map((chip) => {
+                const active = location === chip.value
+                return (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => setLocation(chip.value)}
+                    disabled={searching}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      active
+                        ? "border-border bg-secondary text-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {chip.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Hanya menampilkan lowongan ≤30 hari &amp; masih dibuka.
+            </p>
           </div>
 
           {searchLog.length > 0 && (

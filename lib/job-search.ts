@@ -12,6 +12,7 @@ export const BATCH_LIMIT = 20
 const MIN_INTERVAL_MS = 1500
 const MAX_RETRIES = 3
 const BASE_BACKOFF_MS = 5000
+export const MAX_AGE_DAYS = 30
 
 export type ScrapedJob = NonNullable<ReturnType<typeof toJobData>>
 
@@ -28,7 +29,7 @@ export type SearchEvent =
   | { type: "links"; source: JobSource; count: number; message: string }
   | { type: "detail"; current: number; total: number; message: string }
   | { type: "result"; job: ScrapedJob; match: MatchPreview }
-  | { type: "done"; collected: number; results: number; message: string }
+  | { type: "done"; collected: number; results: number; filtered?: number; message: string }
   | { type: "error"; message: string }
 
 function sourceLabel(source: JobSource): string {
@@ -127,6 +128,7 @@ export function toJobData(
     shareToken: fields.shareToken?.trim() || null,
     companyRefId: fields.companyRefId?.trim() || null,
     companyDetails: fields.companyDetails as Prisma.InputJsonValue | undefined,
+    closed: Boolean(fields.closed),
   }
 }
 
@@ -159,11 +161,46 @@ async function scrapeJobDetail(url: string): Promise<ScrapedJob | null> {
   return toJobData(fields, source, url)
 }
 
+function normalizeLocation(s?: string | null): string {
+  return (s ?? "")
+    .toLowerCase()
+    .replace(/^(kota|kabupaten|provinsi|daerah khusus ibukota)\s+/i, "")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+// Best-effort match between a user-selected location and a parsed job location.
+// Empty selection = no filter. "remote" only matches jobs that are remote.
+export function locationMatches(
+  selected: string | null | undefined,
+  parsed?: string | null,
+): boolean {
+  const sel = normalizeLocation(selected)
+  if (!sel) return true
+  const hay = normalizeLocation(parsed)
+  if (!hay) return false
+  if (sel === "remote") return hay.includes("remote")
+  if (hay.includes("remote")) return false
+  const selTokens = sel.split(" ").filter((t) => t.length >= 3)
+  if (selTokens.some((t) => hay.includes(t))) return true
+  const hayTokens = hay.split(" ").filter((t) => t.length >= 3)
+  if (hayTokens.some((t) => sel.includes(t))) return true
+  return hay.includes(sel) || sel.includes(hay)
+}
+
+export interface SearchOptions {
+  location?: string | null
+  maxAgeDays?: number
+  onlyOpen?: boolean
+}
+
 export async function runJobSearch(
   userId: string,
   keywords: string[],
+  opts: SearchOptions = {},
   onProgress?: (e: SearchEvent) => void,
-): Promise<{ collected: number; results: number }> {
+): Promise<{ collected: number; results: number; filtered: number }> {
   const profile = await prisma.profile
     .findUnique({ where: { userId } })
     .catch(() => null)
@@ -176,7 +213,7 @@ export async function runJobSearch(
       source,
       message: `Mencari di ${sourceLabel(source)}…`,
     })
-    const searchUrls = buildSearchUrls(keywords, source)
+    const searchUrls = buildSearchUrls(keywords, source, opts.location ?? undefined)
     for (const su of searchUrls) {
       const res = await fetchWithBackoff(su)
       if (res?.html) {
@@ -202,7 +239,10 @@ export async function runJobSearch(
 
   const targets = [...collected].slice(0, BATCH_LIMIT)
   let results = 0
+  let filtered = 0
   let current = 0
+  const maxAgeDays = opts.maxAgeDays ?? MAX_AGE_DAYS
+  const onlyOpen = opts.onlyOpen !== false
   for (const url of targets) {
     current++
     onProgress?.({
@@ -213,20 +253,30 @@ export async function runJobSearch(
     })
     const data = await scrapeJobDetail(url)
     if (data) {
-      const match: MatchPreview = profile
-        ? heuristicMatch(profile as Profile, data as unknown as Job)
-        : { score: 0, matchedSkills: [], missingSkills: [], source: "heuristic" }
-      results++
-      onProgress?.({ type: "result", job: data, match })
+      if (onlyOpen && data.closed) {
+        filtered++
+      } else if (data.postedAt && Date.now() - data.postedAt.getTime() > maxAgeDays * 86400000) {
+        filtered++
+      } else if (opts.location && !locationMatches(opts.location, data.location)) {
+        filtered++
+      } else {
+        const match: MatchPreview = profile
+          ? heuristicMatch(profile as Profile, data as unknown as Job)
+          : { score: 0, matchedSkills: [], missingSkills: [], source: "heuristic" }
+        results++
+        onProgress?.({ type: "result", job: data, match })
+      }
     }
     await sleep(MIN_INTERVAL_MS)
   }
 
+  const filteredNote = filtered ? `, ${filtered} difilter (lokasi/tanggal/tutup)` : ""
   onProgress?.({
     type: "done",
     collected: collected.size,
     results,
-    message: `Selesai — ${results} lowongan ditemukan. Pilih yang ingin disimpan.`,
+    filtered,
+    message: `Selesai — ${results} lowongan ditemukan${filteredNote}. Pilih yang ingin disimpan.`,
   })
-  return { collected: collected.size, results }
+  return { collected: collected.size, results, filtered }
 }

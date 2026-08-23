@@ -387,6 +387,25 @@ export function cleanEmpty(fields: ParsedFields): ParsedFields {
   return out as ParsedFields
 }
 
+const CLOSED_PATTERNS = [
+  /sudah ditutup/i,
+  /telah ditutup/i,
+  /pendaftaran ditutup/i,
+  /lowongan (ini |tersebut )?ditutup/i,
+  /lamaran ditutup/i,
+  /pendaftaran telah ditutup/i,
+  /lowongan tidak ( lagi )?tersedia/i,
+  /no longer accepting/i,
+  /\bexpired\b/i,
+  /posisi (sudah )?penuh/i,
+  /kuota (sudah )?penuh/i,
+]
+
+export function isClosedFromText(text: string): boolean {
+  const t = text.toLowerCase()
+  return CLOSED_PATTERNS.some((re) => re.test(t))
+}
+
 export function parseJobHtml(html: string): ParsedFields {
   const $ = cheerio.load(html)
   const ld = extractJobPostingLd($)
@@ -416,6 +435,9 @@ export function parseJobHtml(html: string): ParsedFields {
     const exp = extractExperienceFromText(fields.description)
     if (exp) fields.experience = exp
   }
+
+  const pageText = $("body").text()
+  if (isClosedFromText(pageText)) fields.closed = true
 
   return cleanEmpty(fields)
 }
