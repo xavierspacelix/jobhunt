@@ -57,7 +57,7 @@ Full outcomes: `open-decisions.md`. Current implementation: `architecture.md`.
 - OD-003: sender domain/key required before email sending can be promoted.
 - Feature 08 live end-to-end needs deployed Docker + reachable PostgreSQL +
   external network access to Glints/Jobstreet.
-- Verified: lint, typecheck, and build pass; 102/102 tests in 16 files pass with
+- Verified: lint, typecheck, and build pass; 103/103 tests in 16 files pass with
   `RUN_DB_TESTS=1`; Prisma validate/status and extension ZIP integrity pass.
 - Docker command is unavailable locally, so no image smoke is claimed. There is
   no format gate or browser E2E suite.

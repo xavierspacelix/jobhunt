@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { validateEnv } from "../lib/env";
 import { createFixedWindowRateLimiter } from "../lib/rate-limit";
 import { hasPdfMagic } from "../lib/pdf";
@@ -20,6 +21,17 @@ const baseEnv = {
   AUTH_SECRET: "secret",
   NODE_ENV: "development",
 };
+
+test("production image includes Prisma config before migrate deploy", () => {
+  const dockerfile = readFileSync("Dockerfile", "utf8");
+  const configCopy = dockerfile.indexOf(
+    "COPY --from=builder /app/prisma.config.ts ./prisma.config.ts",
+  );
+  const migrateDeploy = dockerfile.indexOf("yarn prisma migrate deploy");
+
+  assert.ok(configCopy >= 0);
+  assert.ok(migrateDeploy > configCopy);
+});
 
 test("environment validation requires the database and paired service settings", () => {
   assert.equal(validateEnv(baseEnv).DATABASE_URL, baseEnv.DATABASE_URL);
