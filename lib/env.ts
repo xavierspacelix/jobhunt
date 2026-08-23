@@ -37,6 +37,7 @@ export const envSchema = z
     LLM_BASE_URL: optionalUrl,
     LLM_API_KEY: optionalString,
     LLM_MODEL: optionalString,
+    LLM_TIMEOUT_MS: optionalPositiveInt,
     RATE_LIMIT_WINDOW_MS: optionalPositiveInt,
     RATE_LIMIT_MATCH_MAX: optionalPositiveInt,
     RATE_LIMIT_COVER_LETTER_MAX: optionalPositiveInt,
@@ -47,6 +48,10 @@ export const envSchema = z
     RATE_LIMIT_RECOMMENDATION_SAVE_MAX: optionalPositiveInt,
     RATE_LIMIT_REGISTER_MAX: optionalPositiveInt,
     RATE_LIMIT_LOGIN_MAX: optionalPositiveInt,
+    RATE_LIMIT_EXTENSION_AUTHORIZE_MAX: optionalPositiveInt,
+    RATE_LIMIT_EXTENSION_TOKEN_MAX: optionalPositiveInt,
+    RATE_LIMIT_EXTENSION_JOB_MAX: optionalPositiveInt,
+    RATE_LIMIT_EXTENSION_API_MAX: optionalPositiveInt,
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production" && !env.AUTH_URL) {
@@ -69,6 +74,16 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         path: [env.LLM_BASE_URL ? "LLM_API_KEY" : "LLM_BASE_URL"],
         message: "LLM_BASE_URL and LLM_API_KEY must be configured together",
+      });
+    }
+    if (
+      env.LLM_TIMEOUT_MS !== undefined &&
+      (env.LLM_TIMEOUT_MS < 5_000 || env.LLM_TIMEOUT_MS > 300_000)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["LLM_TIMEOUT_MS"],
+        message: "LLM_TIMEOUT_MS must be between 5000 and 300000",
       });
     }
 

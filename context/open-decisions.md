@@ -21,7 +21,7 @@
 | OD-008 | Kanban lib: dnd-kit vs pragmatic-drag | 04 | closed | `@dnd-kit/core` + utilities |
 | OD-009 | Rate limit thresholds for AI scoring | 05 | closed | Resolved: 10 req/min per user (fixed window, in-memory) |
 | OD-010 | Cron schedule & keyword strategy for Fase 3 | 08 | superseded | **Superseded (2026-08-22):** cron dibatalkan per keputusan user. Job search sekarang **on-demand** dari UI (`/jobs` → "Cari Lowongan", `POST /api/jobs/search` SSE). Keyword fleksibel (input user, top 10), bukan cuma 5 skill profil. Batch 20 + 429 backoff (base 5s) tetap dipertahankan di `lib/job-search.ts`. Tidak ada service cron di compose. |
-| OD-014 | Extension credential/write model | 12 | closed | Safe URL-only Manifest V3 handoff; no credentials/direct write; authenticated web preview and explicit Save |
+| OD-014 | Extension credential/write model | 12 | closed | Extension-native DOM preview and explicit direct-save via allowlisted public-client PKCE; hashed 90-day scoped token per browser installation; no web session/password or auto-apply |
 | OD-015 | Shared vs user-owned Job persistence | 03,08 | closed | Signed server previews refresh SHARED canonical; unsigned/edited data is PRIVATE; SavedJob controls visibility/provenance |
 | OD-016 | Production migrations and local CV durability | 01,02 | closed | Container auto-runs migrate deploy; Compose persists `/app/uploads`; MinIO optional/preferred |
 

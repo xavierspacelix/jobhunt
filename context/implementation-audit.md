@@ -40,13 +40,14 @@ intent remains defined by the UI docs and MASTER.
 - The production image installs Chromium, runs non-root, has a health check, and
   applies migrations before startup. Compose persists local uploads and enforces
   a 6 MiB Traefik request-body ceiling.
-- Feature 12 provides an authenticated extension ZIP download and a Manifest V3
-  URL-only handoff. The extension has no application credentials or write API.
+- Feature 12 provides Manifest V3 DOM capture, complete local preview, explicit
+  direct-save, allowlisted PKCE connection, per-installation expiring tokens, and
+  current-browser install detection without exposing web session credentials.
 
 ## Data and Artifacts
 
-- Prisma has 11 committed migrations, including extension download tracking,
-  SavedJob/backfill, and Job scope/deduplication.
+- Prisma has 14 migrations, including extension download tracking, SavedJob/job
+  ownership, extension-native auth/capture, and multi-installation credentials.
 - Legacy Jobs are retained as ownerless SHARED rows. Ownership is never guessed;
   rows without a current user's SavedJob/Application/Recommendation/Match
   relation are invisible to that user.
@@ -61,7 +62,7 @@ intent remains defined by the UI docs and MASTER.
 |---|---|
 | `yarn lint` | pass |
 | `yarn typecheck` | pass |
-| `RUN_DB_TESTS=1 yarn test` | pass, 73/73 across 13 files |
+| `RUN_DB_TESTS=1 yarn test` | pass, 92/92 across 15 files |
 | `yarn build` | pass |
 | `yarn prisma validate` | pass |
 | `yarn prisma migrate status` | pass |
@@ -86,6 +87,6 @@ There is no format-check gate and no browser E2E suite.
   operational work.
 - Google OAuth, magic links, Resend/Nodemailer, email delivery, and EmailLog writes
   are not implemented. OD-003 remains open.
-- Tests cover pure logic, security helpers, proxy behavior, extension handoff,
-  and one PostgreSQL ownership integration path, but not full browser UI, live
+- Tests cover pure logic, security helpers, proxy behavior, extension UI contracts,
+  and PostgreSQL ownership/PKCE/multi-installation/direct-save paths, but not full browser UI, live
   sources, deployed Docker, MinIO, or email E2E.

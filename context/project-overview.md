@@ -44,8 +44,8 @@ Bukan job portal baru, tapi aggregator + tracker + AI assistant di atas portal e
 6. Tracker di `/tracker` untuk drag status, notes, next follow-up, dan dashboard reminder H+7.
 7. User menjalankan pencarian Glints/Jobstreet secara on-demand, meninjau hasil,
    lalu memilih lowongan yang ingin disimpan sebagai rekomendasi.
-8. User dapat mengirim URL tab lowongan dari extension Manifest V3 ke preview web
-   tanpa memberikan kredensial atau akses tulis kepada extension.
+8. User dapat membaca detail lowongan dari DOM tab aktif melalui extension,
+   meninjau preview lokal, lalu direct-save eksplisit dengan koneksi PKCE scoped.
 
 ## MVP Features
 
@@ -59,7 +59,7 @@ Spec di `context/features/` adalah source of truth.
 6. Cover Letter Generator (email via Resend masih deferred)
 7. Dashboard & Analytics
 8. On-demand Job Search & Recommendations
-12. Chrome Extension Safe Handoff (promoted)
+12. Extension-Native Job Capture (promoted)
 
 ## Out Of Scope (MVP)
 

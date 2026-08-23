@@ -59,10 +59,11 @@ Build one feature at a time. Feature complete only when code, tests, docs, and a
 
 ## Promoted Extension
 
-### Feature 12: Chrome Extension Safe Handoff
-- Manifest V3 popup validates an active Glints/Jobstreet tab
-- URL-only handoff into authenticated preview and explicit Save
-- Authenticated ZIP download with tracked timestamp
+### Feature 12: Extension-Native Job Capture
+- Manifest V3 popup parses and previews the active Glints/Jobstreet detail DOM
+- PKCE connection plus per-installation scoped direct-save token
+- Multi-browser server connections and current-browser installation handshake
+- Authenticated ZIP download remains permanently available
 
 ## Current Delivery
 

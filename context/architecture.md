@@ -40,7 +40,7 @@ or Nodemailer integration in the current codebase.
 │   ├── generated/prisma/       # Generated Prisma client (ignored)
 │   └── scrapers/               # Render, search-link, and source parsers
 ├── prisma/                     # Schema, seed, migrations
-├── browser-extension/          # Manifest V3 safe-handoff source
+├── browser-extension/          # Manifest V3 DOM capture source
 ├── tests/                      # node:test unit/integration tests
 ├── context/                    # Product and engineering documentation
 ├── design-system/jobhunter/    # UI master and page overrides
@@ -56,8 +56,8 @@ not assume a `components/features/` directory exists.
 
 ## Data Model
 
-- `User`: credentials identity, extension download timestamp, optional profile,
-  and user-owned applications, matches, recommendations, saved/owned jobs.
+- `User`: credentials identity, extension download telemetry, per-installation
+  extension connections/auth codes, optional profile, and user-owned records.
 - `Profile`: one row per User (`userId` unique), parsed CV fields, raw text,
   active CV storage key, parser source, and timestamps. Uploading atomically
   switches to a new UUID key and removes the prior blob; no history table exists.
@@ -160,7 +160,8 @@ of 5/10/20 seconds.
 - Cache key includes Profile revision, prompt version, and relevant Job content.
 - Match and cover-letter endpoints each use a separate in-memory fixed-window
   limit of 10 requests per user email per minute. Limits are process-local.
-- LLM requests use `LLM_BASE_URL`, `LLM_API_KEY`, optional `LLM_MODEL`,
+- LLM requests use `LLM_BASE_URL`, `LLM_API_KEY`, optional `LLM_MODEL` and
+  bounded `LLM_TIMEOUT_MS` (120-second default),
   temperature 0.2, and JSON mode. Heuristic fallback is available.
 - `POST /api/ai/cover-letter` generates and stores a formal Indonesian draft in
   `Application.coverLetter`.
@@ -180,11 +181,20 @@ of 5/10/20 seconds.
 
 ## Browser Extension
 
-- `browser-extension/` contains a Chrome/Edge Manifest V3 popup using only
-  `activeTab` and `storage`; localhost probe hosts are the only host permissions.
-- It validates the active Glints/Jobstreet HTTPS URL and opens
-  `/jobs?url=...&source=extension`. The web UI consumes and removes the handoff,
-  fetches a normal authenticated preview, and still requires explicit Save.
+- `browser-extension/` contains a Chrome/Edge Manifest V3 popup that reads
+  JSON-LD/DOM from an explicitly active Glints/Jobstreet detail tab, previews the
+  bounded payload locally, and direct-saves only after explicit confirmation.
+- The service worker owns `chrome.identity.launchWebAuthFlow`, PKCE S256,
+  short-lived single-use auth codes, and hashed 90-day scoped bearer tokens bound
+  to the allowlisted extension ID and a per-browser installation ID.
+- Release host permissions are production-only; end users do not configure a
+  backend URL or localhost detection in the popup.
+- Multiple installations per user are independent. A restricted external-message
+  handshake detects the bundled extension only in the current dashboard browser;
+  server connection status cannot prove installation on another device.
+- Extension captures use PRIVATE Job rows with isolated extension dedupe/provenance.
+  `/jobs` requests `GET /api/jobs?origin=extension`; the default endpoint contract
+  remains compatible with manual/search consumers.
 - `GET /api/extension/download` requires a session, records
   `extensionDownloadedAt`, and serves the no-store ZIP artifact with attachment
   and `nosniff` headers.
@@ -192,8 +202,8 @@ of 5/10/20 seconds.
 ## Verification
 
 - Unit tests use Node's built-in test runner through `tsx`.
-- Current suite: 73 tests in 13 files, including security helpers, proxy,
-  extension handoff, and an opt-in PostgreSQL ownership integration test.
+- Tests include security helpers, proxy behavior, extension UI contracts, and
+  opt-in PostgreSQL ownership/PKCE/multi-installation/direct-save integration.
 - CI runs Prisma validate/migrate, lint, typecheck, tests with `RUN_DB_TESTS=1`,
   and build. There is no format gate or browser E2E suite.
 - See `implementation-audit.md` for exact verified commands and external gaps.

@@ -75,3 +75,19 @@ export const loginRateLimit = createFixedWindowRateLimiter({
   limit: positiveInt(process.env.RATE_LIMIT_LOGIN_MAX, 10),
   windowMs,
 });
+export const extensionTokenRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_EXTENSION_TOKEN_MAX, 20),
+  windowMs,
+});
+export const extensionAuthorizeRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_EXTENSION_AUTHORIZE_MAX, 10),
+  windowMs,
+});
+export const extensionJobRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_EXTENSION_JOB_MAX, 60),
+  windowMs,
+});
+export const extensionApiRateLimit = createFixedWindowRateLimiter({
+  limit: positiveInt(process.env.RATE_LIMIT_EXTENSION_API_MAX, 120),
+  windowMs,
+});

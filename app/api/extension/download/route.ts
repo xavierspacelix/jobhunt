@@ -23,7 +23,7 @@ export const GET = auth(async (request) => {
     await prisma.user.update({
       where: { email },
       data: { extensionDownloadedAt: new Date() },
-    })
+    }).catch(() => undefined)
 
     return new Response(new Uint8Array(artifact), {
       headers: {

@@ -41,7 +41,7 @@ Required:
 
 Optional:
 
-- `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`
+- `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, optional `LLM_TIMEOUT_MS`
 - `MINIO_*`
 - `RATE_LIMIT_*`
 
@@ -74,14 +74,22 @@ scraper fallback, runs as a non-root user, and persists local fallback uploads.
 ## Chrome Extension
 
 Authenticated users can download the Manifest V3 extension from the dashboard.
-It hands a Glints/Jobstreet tab URL to `/jobs` for preview and explicit save; it
-does not hold credentials or write directly to the API.
+It parses a Glints/Jobstreet detail page from the active tab, previews the complete
+bounded payload locally, then direct-saves only after explicit confirmation. Account
+connection uses PKCE and an independent, expiring scoped token per browser install.
+The dashboard download remains available and detects installation only in the
+current browser.
 
 Rebuild its artifact with:
 
 ```bash
 bash scripts/build-extension.sh
 ```
+
+For local browser testing, run `yarn extension:dev`, start the app at
+`http://localhost:3000`, then load `.artifacts/job-hunter-extension-dev` as an
+unpacked extension. Disable the production extension first because both builds
+share the stable extension ID.
 
 ## Documentation
 

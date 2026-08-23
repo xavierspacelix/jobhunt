@@ -13,8 +13,8 @@ remain in `context/open-decisions.md`.
 
 ## Index
 
-No formal JobHunter ADR files exist. Closed outcomes, including safe extension
-handoff, SHARED/PRIVATE Job ownership, SavedJob visibility, automatic migrations,
+No formal JobHunter ADR files exist. Closed outcomes, including extension-native
+PKCE capture, SHARED/PRIVATE Job ownership, SavedJob visibility, automatic migrations,
 and persistent local uploads, currently live in `open-decisions.md`. Promote a
 decision into an ADR when durable rationale/history needs a standalone record.
 

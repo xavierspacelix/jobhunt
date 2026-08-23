@@ -8,7 +8,7 @@ architecture, library docs, UI registry, or `implementation-audit.md`.
 
 - Phase: Phase 5 - On-Demand Discovery
 - In progress: 08 - On-demand Job Search & Recommendations
-- Last delivered: 12 - Chrome Extension Safe Handoff
+- Last delivered: 12 - Extension-Native Job Capture
 - Next: Feature 08 live external/deployed-environment verification
 
 ## Features
@@ -23,7 +23,7 @@ architecture, library docs, UI registry, or `implementation-audit.md`.
 | 06 | Cover Letter Generation | `features/06-email-coverletter.md` | complete |
 | 07 | Dashboard & Analytics | `features/07-dashboard-analytics.md` | complete |
 | 08 | On-demand Job Search & Recommendations | `features/08-job-search.md` | in progress |
-| 12 | Chrome Extension Safe Handoff | `features/12-chrome-extension.md` | complete |
+| 12 | Extension-Native Job Capture | `features/12-chrome-extension.md` | complete |
 
 Allowed status: `planned`, `in progress`, `blocked`, `needs remediation`,
 `complete`.
@@ -42,6 +42,8 @@ deferred under OD-003 and is not represented as delivered.
   selected result as a Recommendation.
 - Signed previews control SHARED Job refresh; unsigned/edited manual data is
   PRIVATE and SavedJob controls user visibility/provenance.
+- Extension capture uses allowlisted-ID PKCE, independent per-browser tokens,
+  local DOM preview, and explicit PRIVATE direct-save with separate provenance.
 - Production is Docker/Traefik with automatic migrations, non-root runtime,
   persistent uploads, and external DB.
 
@@ -52,7 +54,7 @@ Full outcomes: `open-decisions.md`. Current implementation: `architecture.md`.
 - OD-003: sender domain/key required before email sending can be promoted.
 - Feature 08 live end-to-end needs deployed Docker + reachable PostgreSQL +
   external network access to Glints/Jobstreet.
-- Verified: lint, typecheck, and build pass; 73/73 tests in 13 files pass with
+- Verified: lint, typecheck, and build pass; 92/92 tests in 15 files pass with
   `RUN_DB_TESTS=1`; Prisma validate/status and extension ZIP integrity pass.
 - Docker command is unavailable locally, so no image smoke is claimed. There is
   no format gate or browser E2E suite.

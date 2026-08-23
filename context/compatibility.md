@@ -58,7 +58,12 @@
 ## Extension
 
 - Chrome and Edge extension uses Manifest V3; Firefox is not claimed.
-- Remote JobHunter base URL must be HTTPS. HTTP is limited to localhost/127.0.0.1
-  health detection for development.
+- Bundled manifest key stabilizes extension ID
+  `lokhjkfokakakehiojciicjhfokmkldg`; production identity is not claimed as Chrome
+  Web Store signing until the package is published there.
+- The release extension is locked to `https://jobhunt.spacelix.qzz.io`; there is
+  no end-user connection setting. `yarn extension:dev` generates a localhost-only
+  unpacked build under `.artifacts/`; it cannot be installed beside production
+  because both builds share an ID. Dashboard detection is current-browser only.
 - The ZIP is a generated deployment artifact and can be rebuilt with
   `bash scripts/build-extension.sh`.

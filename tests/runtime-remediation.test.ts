@@ -10,7 +10,7 @@ import {
 } from "../lib/application-input";
 import { parseJobSearchInput } from "../lib/job-search-input";
 import { parseKeywordRecommendation } from "../lib/recommend-keywords";
-import { callChatJson, parseCvLlmOutput } from "../lib/llm";
+import { callChatJson, getLlmTimeoutMs, parseCvLlmOutput } from "../lib/llm";
 import { parseCoverLetterLlmOutput } from "../lib/cover-letter";
 import { createMatchCacheKey, parseMatchLlmOutput } from "../lib/match";
 import type { Job, Profile } from "@/lib/generated/prisma/client";
@@ -259,5 +259,21 @@ test("chat requests carry an AbortSignal timeout", async () => {
     else process.env.LLM_BASE_URL = previousBaseUrl;
     if (previousApiKey === undefined) delete process.env.LLM_API_KEY;
     else process.env.LLM_API_KEY = previousApiKey;
+  }
+});
+
+test("LLM timeout is configurable within a bounded range", () => {
+  const previous = process.env.LLM_TIMEOUT_MS;
+  try {
+    delete process.env.LLM_TIMEOUT_MS;
+    assert.equal(getLlmTimeoutMs(), 120_000);
+    process.env.LLM_TIMEOUT_MS = "90000";
+    assert.equal(getLlmTimeoutMs(), 90_000);
+    process.env.LLM_TIMEOUT_MS = "999999";
+    assert.equal(getLlmTimeoutMs(), 120_000);
+    assert.throws(() => validateEnv({ ...baseEnv, LLM_TIMEOUT_MS: "4000" }));
+  } finally {
+    if (previous === undefined) delete process.env.LLM_TIMEOUT_MS;
+    else process.env.LLM_TIMEOUT_MS = previous;
   }
 });

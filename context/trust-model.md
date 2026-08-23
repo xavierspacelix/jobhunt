@@ -63,8 +63,13 @@ pihak ketiga, extension handoff, serta output LLM.
   pins browser fallback to exact-host/same-origin resources.
 - LLM requests are bounded and strict-output parsed. Heuristic fallback and user
   review keep AI advisory rather than authoritative.
-- Extension is a URL-only Manifest V3 handoff. It receives no credentials or
-  direct-write token; web auth, preview signing, and explicit Save still apply.
+- Extension auth is a public-client PKCE flow restricted to the bundled extension
+  ID. Codes are hashed, five-minute and single-use; bearer tokens are hashed,
+  scoped to job write plus account identity read, extension/installation-bound,
+  revocable, and expire after 90 days.
+- DOM payloads are previewed before explicit Save, strict/bounded to 64 KB, and
+  stored as user-owned PRIVATE jobs with extension-specific provenance. The
+  extension never receives a web session/password and cannot create Applications.
 
 ## Honest Residuals
 
@@ -81,6 +86,9 @@ pihak ketiga, extension handoff, serta output LLM.
   EmailLog writes. OD-003 must close before that boundary is introduced.
 - No browser E2E, deployed Docker smoke, MinIO E2E, or live-source E2E currently
   validates the full operational boundary.
+- A public Manifest key stabilizes the unpacked extension ID but is not equivalent
+  to Chrome Web Store signing. Installation detection applies only to the current
+  browser through a domain-restricted external-message handshake.
 
 See `implementation-audit.md` for code references and verification scope.
 

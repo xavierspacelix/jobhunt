@@ -80,7 +80,18 @@ const chatResponseSchema = z.object({
     .min(1),
 });
 
-const LLM_TIMEOUT_MS = 20_000;
+const DEFAULT_LLM_TIMEOUT_MS = 120_000;
+const MIN_LLM_TIMEOUT_MS = 5_000;
+const MAX_LLM_TIMEOUT_MS = 300_000;
+
+export function getLlmTimeoutMs(): number {
+  const configured = Number(process.env.LLM_TIMEOUT_MS);
+  return Number.isInteger(configured) &&
+    configured >= MIN_LLM_TIMEOUT_MS &&
+    configured <= MAX_LLM_TIMEOUT_MS
+    ? configured
+    : DEFAULT_LLM_TIMEOUT_MS;
+}
 
 export function parseCvLlmOutput(value: unknown): CvData {
   return cvLlmSchema.parse(value);
@@ -532,7 +543,7 @@ export async function callChatJson(
         { role: "user", content: user },
       ],
     }),
-    signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(getLlmTimeoutMs()),
   });
 
   if (!res.ok) {

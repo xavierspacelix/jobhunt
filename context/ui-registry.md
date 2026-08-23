@@ -73,11 +73,8 @@ File: `components/job-fetcher.tsx`
 - Empty saved state uses `rounded-xl border border-dashed border-border
   bg-card/50 p-8 text-center` with muted icon/copy.
 
-### Extension Handoff And Private Fallback
+### Manual Preview And Private Fallback
 
-- Chrome-extension handoff accepts only credential-free HTTPS Glints/Jobstreet
-  URLs, switches to the manual tab, fills the URL, removes handoff query params,
-  and starts preview fetch once.
 - A 422 parse failure from a supported source opens an editable blank draft and
   explains that fields must be completed manually instead of ending the flow.
 - Editing a fetched preview invalidates its preview token and displays the
@@ -113,6 +110,30 @@ File: `components/job-fetcher.tsx`
   `border-destructive/40 text-destructive` outlined pills.
 - External links and icon controls retain 44px mobile targets; icon-only detail,
   close, and delete controls require Indonesian `aria-label` text.
+
+## Extension Connection And Capture
+
+Files: `components/extension-connection-card.tsx`,
+`components/extension-connect-card.tsx`, `components/extension-job-list.tsx`, and
+`browser-extension/popup.{html,css}`
+
+- Connection cards use `rounded-2xl border border-border bg-card p-5 shadow-sm`
+  with semantic status badges, permanent outlined download action, local-browser
+  install state, active installation count, and two-step destructive revoke.
+- PKCE consent uses the same card surface, a `bg-secondary rounded-xl p-4`
+  permission explanation, explicit official extension ID, and separate cancel/
+  authorize actions with alert and polite live regions.
+- Extension jobs use `rounded-xl border border-border bg-card p-4`, source and
+  provenance badges, 44px mobile actions, detail sheet, inline destructive
+  confirmation, and extension-specific empty/retry states.
+- Popup uses semantic CSS variables in light/dark mode. Preview exposes every
+  persisted field, description is scrollable rather than clipped, and all controls
+  have at least 44px interaction targets with visible focus outlines.
+- Popup uses the BrandLogo trend mark and the product name “Job Hunter”; connection
+  has no end-user settings and PKCE runs in the service worker.
+- Download telemetry never hides the download action. “Installed in this browser”
+  comes only from the extension handshake; server connection state is shown
+  separately and never presented as proof of installation on another device.
 
 ## Profile Dropzone
 

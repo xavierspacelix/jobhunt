@@ -23,6 +23,12 @@ enum JobScope {
 enum SavedJobOrigin {
   MANUAL
   SEARCH
+  EXTENSION
+}
+
+enum ExtensionScope {
+  EXTENSION_JOBS_WRITE   @map("extension:jobs:write")
+  EXTENSION_ACCOUNT_READ @map("extension:account:read")
 }
 
 enum ApplicationStatus {
@@ -45,12 +51,49 @@ model User {
   updatedAt             DateTime  @updatedAt
   extensionDownloadedAt DateTime?
 
-  profile         Profile?
-  applications    Application[]
-  matches         Match[]
-  recommendations Recommendation[]
-  savedJobs       SavedJob[]
-  ownedJobs       Job[]
+  profile              Profile?
+  applications         Application[]
+  matches              Match[]
+  recommendations      Recommendation[]
+  savedJobs            SavedJob[]
+  ownedJobs            Job[]
+  extensionConnections ExtensionConnection[]
+  extensionAuthCodes   ExtensionAuthCode[]
+}
+
+model ExtensionConnection {
+  id             String           @id @default(cuid())
+  userId         String
+  installationId String
+  tokenHash      String           @unique
+  extensionId    String
+  scopes         ExtensionScope[] @default([EXTENSION_JOBS_WRITE, EXTENSION_ACCOUNT_READ])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  expiresAt      DateTime
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, installationId])
+  @@index([userId, revokedAt])
+}
+
+model ExtensionAuthCode {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  codeHash       String   @unique
+  redirectUri    String
+  installationId String
+  codeChallenge  String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId, expiresAt])
 }
 
 model Profile {

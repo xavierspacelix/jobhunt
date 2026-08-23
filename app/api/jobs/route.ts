@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import {
+  extensionJobsWhere,
   jobVisibilityWhere,
   manualJobInputSchema,
   privateJobDedupeKey,
@@ -154,8 +155,9 @@ export const GET = auth(async (req) => {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const extensionOnly = new URL(req.url).searchParams.get("origin") === "extension";
   const jobs = await prisma.job.findMany({
-    where: jobVisibilityWhere(user.id),
+    where: extensionOnly ? extensionJobsWhere(user.id) : jobVisibilityWhere(user.id),
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {
@@ -171,11 +173,11 @@ export const GET = auth(async (req) => {
           missingSkills: true,
         },
       },
-      recommendations: {
+      applications: {
         where: { userId: user.id },
         select: { id: true },
       },
-      applications: {
+      recommendations: {
         where: { userId: user.id },
         select: { id: true },
       },
@@ -183,15 +185,16 @@ export const GET = auth(async (req) => {
   });
 
   const jobsWithScore = jobs.map(
-    ({ savedBy, matches, recommendations, applications, ...job }) => {
-    const savedOrigin = savedBy[0]?.origin;
+    ({ savedBy, matches, applications, recommendations, ...job }) => {
     return {
       ...job,
       matchScore: matches[0]?.score ?? null,
       matchedSkills: matches[0]?.matchedSkills ?? [],
       missingSkills: matches[0]?.missingSkills ?? [],
       tracked: applications.length > 0,
-      origin: savedJobDisplayOrigin(savedOrigin, recommendations.length > 0),
+      origin: extensionOnly
+        ? ("extension" as const)
+        : savedJobDisplayOrigin(savedBy[0]?.origin, recommendations.length > 0),
     };
     },
   );

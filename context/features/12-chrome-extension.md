@@ -1,54 +1,63 @@
-# Feature 12: Chrome Extension Safe Handoff
+# Feature 12: Extension-Native Job Capture
 
 ## Goal
 
-Mempercepat pemindahan URL lowongan Glints/Jobstreet dari tab aktif ke alur
-preview JobHunter tanpa memberi ekstensi kredensial atau akses tulis langsung.
+Memindahkan detail lowongan Glints/Jobstreet dari DOM tab aktif ke akun JobHunter
+tanpa fetch portal dari server dan tanpa auto-apply.
 
 ## User Outcome
 
-User mengunduh ekstensi dari dashboard, membuka lowongan Glints/Jobstreet, lalu
-memilih **Buka di JobHunter**. JobHunter membuka tab input URL, mengambil preview,
-dan tetap meminta user menekan **Simpan**.
+User mengunduh extension dari dashboard, membuka detail lowongan, menghubungkan
+akun melalui login JobHunter, meninjau seluruh data yang akan ditulis di popup,
+lalu menekan **Simpan ke JobHunter**. `/jobs` hanya menampilkan simpanan extension.
 
 ## In Scope
 
-- Ekstensi Chrome/Edge Manifest V3 dengan popup dan validasi tab aktif.
-- Domain lowongan: `glints.com`, `jobstreet.co.id`, dan `jobstreet.com`, termasuk
-  subdomain HTTPS.
-- Base URL JobHunter dapat dikonfigurasi, default
-  `https://jobhunt.spacelix.qzz.io`.
-- Opsi deteksi `http://localhost:3000` melalui `GET /api/health`; kegagalan probe
-  kembali ke base URL yang dikonfigurasi.
-- Handoff membuka `/jobs?url=<encoded>&source=extension` di tab baru.
-- `JobFetcher` mengonsumsi handoff satu kali, memilih tab input URL, mengisi URL,
-  memulai preview yang sudah ada, lalu menghapus parameter handoff dari address bar.
-- `GET /api/extension/download` membutuhkan session, mengisi
-  `User.extensionDownloadedAt`, dan mengirim artefak ZIP.
-- Tombol download dashboard menggunakan primitive `Button`, semantic token, serta
-  state loading, success, dan error yang dapat dibaca assistive technology.
+- Chrome/Edge Manifest V3 dengan `activeTab`, `scripting`, `storage`, dan `identity`.
+- JSON-LD `JobPosting` diprioritaskan; meta dan DOM menjadi fallback.
+- Popup menampilkan preview seluruh payload dan membutuhkan tindakan Save eksplisit.
+- Login menggunakan `chrome.identity.launchWebAuthFlow` dan PKCE S256 dari
+  service worker agar flow tetap hidup ketika popup kehilangan fokus.
+- Satu installation ID acak per browser. Beberapa browser/laptop dapat terhubung
+  bersamaan tanpa merotasi token instalasi lain.
+- Dashboard selalu menampilkan download dan memakai `externally_connectable`
+  handshake untuk mendeteksi extension resmi pada browser yang sedang dipakai.
+- `GET /api/extension/connection` membedakan instalasi lokal dari jumlah koneksi
+  server aktif. `extensionDownloadedAt` hanya telemetry, bukan status instalasi.
+- `GET /api/jobs?origin=extension` memasok daftar `/jobs`; contract default
+  `GET /api/jobs` tetap mencakup seluruh job visible untuk consumer lama.
+- `GET /api/extension/download` membutuhkan session dan mengirim ZIP no-store.
 
 ## Trust And Safety
 
-- Tidak ada API direct-write, extension token, atau salinan session cookie.
-- Extension hanya menyimpan preferensi base URL dan deteksi localhost melalui
-  `chrome.storage.sync`.
-- Preview memakai endpoint auth dan validasi URL Feature 03; penyimpanan tetap
-  tindakan eksplisit user di web app.
-- HTTP hanya diterima untuk `localhost`/`127.0.0.1`; target remote harus HTTPS.
-- Parameter handoff yang bukan `source=extension` atau bukan URL portal yang
-  didukung diabaikan.
+- Hanya extension ID resmi `lokhjkfokakakehiojciicjhfokmkldg` yang diizinkan.
+- Authorization code di-hash, single-use, PKCE-bound, berlaku lima menit, dan satu
+  flow terbaru per user. Token di-hash, diikat ke extension serta installation ID,
+  memiliki scope write plus account-read untuk menampilkan tujuan akun, dan
+  kedaluwarsa setelah 90 hari.
+- Raw token dan installation ID hanya berada di `chrome.storage.local`. Extension
+  rilis terkunci ke origin production; tidak ada setting koneksi manual.
+- Direct-write hanya menerima HTTPS Glints/Jobstreet, payload strict maksimal 64 KB,
+  field bounded, dan menyimpan PRIVATE Job milik user dengan origin `EXTENSION`.
+- Dedupe extension terpisah dari manual provenance untuk URL yang sama.
+- CORS hanya merefleksikan origin extension allowlisted; token/save endpoint
+  memiliki rate limit sebelum lookup token serta limit per connection.
+- Extension tidak menerima password/session cookie, tidak menyimpan Application,
+  dan tidak menjalankan auto-apply atau polling portal.
 
 ## Acceptance Criteria
 
-- [x] Popup menolak tab yang bukan lowongan Glints/Jobstreet.
-- [x] Base URL dapat diubah dan opsi localhost gagal secara aman ke production/config.
-- [x] Handoff membuka preview, bukan menyimpan Job secara langsung.
-- [x] Refresh tidak mengulang handoff yang sudah dikonsumsi.
-- [x] Download tanpa auth mengembalikan 401.
-- [x] Download auth mengirim ZIP dengan header attachment dan mencatat timestamp.
-- [x] Artefak dapat dibangun ulang tanpa dependency npm tambahan.
-- [x] `unzip -t public/jobhunter-chrome-extension.zip` passes.
+- [x] Popup menolak tab yang bukan detail Glints/Jobstreet.
+- [x] Popup membaca DOM, menampilkan seluruh payload, dan hanya save setelah klik.
+- [x] PKCE code ditolak saat replay, expired, verifier salah, atau origin salah.
+- [x] Token lintas extension ditolak dan dua installation token tetap independen.
+- [x] Payload invalid/oversized ditolak dan data tersimpan private/user-scoped.
+- [x] Manual dan extension capture URL sama tidak menimpa provenance.
+- [x] Dashboard download selalu tersedia dan membedakan local install/server status.
+- [x] Revocation dashboard mencabut semua installation token user.
+- [x] Artifact dibangun ulang tanpa dependency npm tambahan.
+- [x] Build development terpisah menargetkan localhost tanpa mengekspos setting
+  koneksi pada paket production.
 
 ## Artifact
 
@@ -60,16 +69,18 @@ dan tetap meminta user menekan **Simpan**.
 
 - 01
 - 03
+- 04
+- 05
 
 ## Out Of Scope
 
-- Auto-apply, scraping di extension, content script, background polling, dan API
-  yang menyimpan Job/Application langsung dari extension.
+- Auto-apply, pembuatan Application otomatis, background polling, dan native app.
 - Publikasi otomatis ke Chrome Web Store.
+- Deteksi extension pada browser atau laptop lain; browser hanya dapat handshake
+  dengan extension pada browser yang sedang membuka dashboard.
 
 ## Verification Status
 
-Implementation and artifact gates pass. Chrome/Edge store publication and full
-browser E2E are not claimed. The handoff is intentionally not a one-click save:
-web authentication, server preview signing, user review, and explicit Save remain
-mandatory.
+Static checks and PostgreSQL extension integration tests pass. Full browser E2E,
+Chrome Web Store identity, and live Glints/Jobstreet selector verification remain
+external release checks.

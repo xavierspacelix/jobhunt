@@ -36,5 +36,6 @@ Di detail Job/Application klik "Cek Kecocokan" -> badge score + chips.
 - Limiter adalah fixed-window in-memory per email, sehingga reset saat process
   restart dan tidak shared antar replica.
 - Cache lookup dilakukan setelah rate-limit check; cache hit tetap memakai quota.
-- LLM request has a timeout and strict output schema, but CV/JD prompt content is
+- LLM request has a configurable bounded timeout (120-second default), truncates
+  job-description context to 12,000 characters, and uses a strict output schema, but CV/JD prompt content is
   untrusted. Score remains advisory and requires user review.

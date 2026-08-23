@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 
 const EXTENSION_FILENAME = "jobhunter-chrome-extension.zip";
 
-export function ExtensionDownloadButton() {
+export function ExtensionDownloadButton({
+  showLabel = false,
+}: {
+  showLabel?: boolean;
+}) {
   const [loading, setLoading] = React.useState(false);
   const [downloaded, setDownloaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -71,7 +75,7 @@ export function ExtensionDownloadButton() {
         ) : (
           <DownloadIcon className="size-4" aria-hidden="true" />
         )}
-        <span className="hidden lg:inline">
+        <span className={showLabel ? "inline" : "hidden lg:inline"}>
           {loading
             ? "Mengunduh..."
             : downloaded

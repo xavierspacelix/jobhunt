@@ -24,7 +24,7 @@ Records approved deps. Not substitute for official docs.
 | Scraper parse | cheerio 1.x | Pure JSON-LD/DOM parsing after HTML retrieval; does not execute pages |
 | Scraper render | playwright 1.x (local Chromium) | Fallback only after pinned native fetch fails/is blocked; exact-host DNS pin and same-origin resource policy. Browserbase rejected |
 | On-demand search renderer | playwright 1.x | Headless render via `POST /api/jobs/search`; no scheduler/cron |
-| Extension | Chrome/Edge Manifest V3, no npm runtime | `activeTab` + `storage`, URL-only handoff, generated ZIP artifact |
+| Extension | Chrome/Edge Manifest V3, no npm runtime | `activeTab`, `scripting`, `storage`, `identity`; DOM preview, PKCE direct-save, external install handshake, generated ZIP |
 | Deploy | Docker + Compose | Node 24, automatic migrations, non-root runtime, healthcheck, persistent local-upload volume, external Traefik/Postgres/optional MinIO; no cron |
 | AI | OpenAI-compatible HTTP API (provider-agnostic) | Direct `fetch` ke `/chat/completions` via `LLM_BASE_URL`; no provider SDK; heuristic fallback |
 | Email | Deferred, no package installed | `EmailLog` schema dan env placeholder ada; Resend/Nodemailer belum diimplementasikan |

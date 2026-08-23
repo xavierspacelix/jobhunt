@@ -5,8 +5,8 @@ Track candidates that have not been promoted. Active status remains in
 
 ## MVP
 
-Features 01-08 are MVP. Feature 12 was explicitly promoted and implemented as a
-safe URL handoff, not a one-click/direct-save extension.
+Features 01-08 are MVP. Feature 12 was explicitly promoted and implemented as an
+extension-native DOM preview with explicit PKCE-authenticated direct-save.
 
 ## Post-MVP Candidates
 

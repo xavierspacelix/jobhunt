@@ -38,6 +38,14 @@ export const supportedJobUrlSchema = z
   });
 
 const nullableText = (max: number) => z.string().max(max).nullable();
+const httpUrlSchema = z
+  .string()
+  .max(2048)
+  .url()
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "https:" || protocol === "http:";
+  }, "URL harus menggunakan HTTP atau HTTPS");
 
 export const trustedJobPayloadSchema = z
   .object({
@@ -166,12 +174,68 @@ export const manualJobInputSchema = z
     }
   });
 
+export const extensionJobInputSchema = z
+  .object({
+    title: z.string().trim().min(1).max(300),
+    company: z.string().trim().max(300),
+    location: nullableText(300),
+    salary: nullableText(200),
+    source: z.enum(["GLINTS", "JOBSTREET"]),
+    sourceUrl: supportedJobUrlSchema,
+    description: nullableText(50000),
+    postedAt: z.string().datetime().nullable(),
+    employmentType: nullableText(200),
+    experience: nullableText(200),
+    education: nullableText(200),
+    category: nullableText(300),
+    recruiter: nullableText(300),
+    skills: z.array(z.string().trim().min(1).max(200)).max(50),
+    externalJobId: nullableText(200),
+    companyDetails: z
+      .object({
+        name: nullableText(300).optional(),
+        industry: nullableText(300).optional(),
+        size: nullableText(200).optional(),
+        website: httpUrlSchema.nullable().optional(),
+        linkedin: httpUrlSchema.nullable().optional(),
+        instagram: httpUrlSchema.nullable().optional(),
+        twitter: httpUrlSchema.nullable().optional(),
+        facebook: httpUrlSchema.nullable().optional(),
+        address: nullableText(500).optional(),
+        about: nullableText(5000).optional(),
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict()
+  .superRefine((job, ctx) => {
+    if (getSupportedJobSource(job.sourceUrl) !== job.source) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["source"],
+        message: "Sumber tidak cocok dengan URL",
+      });
+    }
+  });
+
 export function privateJobDedupeKey(userId: string, sourceUrl: string): string {
   return `private:${userId}:${sourceUrl}`;
 }
 
+export function extensionJobDedupeKey(userId: string, sourceUrl: string): string {
+  return `extension:${userId}:${sourceUrl}`;
+}
+
+export function extensionJobsWhere(userId: string) {
+  return {
+    scope: "PRIVATE" as const,
+    ownerId: userId,
+    savedBy: { some: { userId, origin: "EXTENSION" as const } },
+  };
+}
+
 export function savedJobDisplayOrigin(
-  savedOrigin: "MANUAL" | "SEARCH" | undefined,
+  savedOrigin: "MANUAL" | "SEARCH" | "EXTENSION" | undefined,
   hasRecommendation: boolean,
 ): "manual" | "auto" | "both" | null {
   const manual = savedOrigin === "MANUAL";

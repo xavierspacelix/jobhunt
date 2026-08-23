@@ -27,7 +27,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
   { title: "Profil & CV", url: "/profile", icon: <FileTextIcon /> },
-  { title: "Lowongan", url: "/jobs", icon: <SearchIcon /> },
+  { title: "Lowongan Extension", url: "/jobs", icon: <SearchIcon /> },
   { title: "Pelacak Lamaran", url: "/tracker", icon: <ListChecksIcon /> },
 ];
 

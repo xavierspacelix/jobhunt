@@ -22,9 +22,11 @@ function scoreColor(score: number): string {
 export function MatchPanel({
   jobId,
   autoRun = false,
+  onComplete,
 }: {
   jobId: string;
   autoRun?: boolean;
+  onComplete?: (result: MatchResponse) => void;
 }) {
   const [state, setState] = React.useState<
     "idle" | "loading" | "done" | "error"
@@ -63,6 +65,7 @@ export function MatchPanel({
         return;
       }
       setResult(data as MatchResponse);
+      onComplete?.(data as MatchResponse);
       setState("done");
     } catch {
       setError("Terjadi kesalahan saat mengecek kecocokan.");

@@ -20,7 +20,8 @@ const matchLlmSchema = z
   })
   .strict();
 
-const MATCH_PROMPT_VERSION = "v3";
+const MATCH_PROMPT_VERSION = "v4";
+const MATCH_DESCRIPTION_LIMIT = 12_000;
 
 export function parseMatchLlmOutput(value: unknown): MatchResult {
   const parsed = matchLlmSchema.parse(value);
@@ -249,7 +250,7 @@ Job:
 - Experience: ${job.experience ?? ""}
 - Education: ${job.education ?? ""}
 - Skills: ${(job.skills ?? []).join(", ")}
-- Description: ${job.description ?? ""}`;
+- Description: ${(job.description ?? "").slice(0, MATCH_DESCRIPTION_LIMIT)}`;
   return parseMatchLlmOutput(await callChatJson(system, user));
 }
 
@@ -261,10 +262,8 @@ export async function scoreMatch(
     try {
       return await llmMatch(profile, job);
     } catch (err) {
-      console.error(
-        "[match] LLM scoring failed, falling back to heuristic",
-        err,
-      );
+      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      console.error(`[match] LLM scoring failed, falling back to heuristic: ${detail}`);
     }
   }
   return heuristicMatch(profile, job);
