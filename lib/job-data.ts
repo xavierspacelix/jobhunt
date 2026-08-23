@@ -206,6 +206,8 @@ export const extensionJobInputSchema = z
       })
       .strict()
       .nullable(),
+    forceSave: z.boolean().optional(),
+    skipMatch: z.boolean().optional(),
   })
   .strict()
   .superRefine((job, ctx) => {
@@ -237,7 +239,8 @@ export function extensionJobsWhere(userId: string) {
 export function savedJobDisplayOrigin(
   savedOrigin: "MANUAL" | "SEARCH" | "EXTENSION" | undefined,
   hasRecommendation: boolean,
-): "manual" | "auto" | "both" | null {
+): "manual" | "auto" | "both" | "extension" | null {
+  if (savedOrigin === "EXTENSION") return "extension";
   const manual = savedOrigin === "MANUAL";
   if (manual && hasRecommendation) return "both";
   if (hasRecommendation || savedOrigin === "SEARCH") return "auto";

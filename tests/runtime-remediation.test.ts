@@ -36,7 +36,9 @@ test("production image includes Prisma config before migrate deploy", () => {
 test("environment validation requires the database and paired service settings", () => {
   assert.equal(validateEnv(baseEnv).DATABASE_URL, baseEnv.DATABASE_URL);
   assert.throws(() => validateEnv({ ...baseEnv, DATABASE_URL: undefined }));
-  assert.throws(() => validateEnv({ ...baseEnv, LLM_API_KEY: "key" }));
+  assert.doesNotThrow(() =>
+    validateEnv({ ...baseEnv, LLM_API_KEY: "key" }),
+  );
   assert.throws(() =>
     validateEnv({ ...baseEnv, MINIO_ENDPOINT: "minio", MINIO_PORT: "9000" }),
   );
@@ -259,6 +261,20 @@ test("match cache key changes with job content but not object key order", () => 
     createMatchCacheKey(profile, job),
     createMatchCacheKey(profile, { ...job, description: "Build data systems" }),
   );
+});
+
+test("explicit AI rematch bypasses a valid cache entry", () => {
+  const route = readFileSync(
+    new URL("../app/api/match/route.ts", import.meta.url),
+    "utf8",
+  );
+  const panel = readFileSync(
+    new URL("../components/match-panel.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(route, /if \(!force && existing && existing\.cacheKey === cacheKey\)/);
+  assert.match(panel, /onClick=\{\(\) => check\(true\)\}/);
 });
 
 test("chat requests carry an AbortSignal timeout", async () => {

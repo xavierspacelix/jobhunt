@@ -644,6 +644,7 @@ export function KanbanBoard({
 
       {view === "board" ? (
         <DndContext
+          id="kanban-board"
           sensors={sensors}
           accessibility={dragAccessibility}
           onDragStart={handleDragStart}

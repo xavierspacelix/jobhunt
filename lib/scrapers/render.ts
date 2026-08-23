@@ -205,7 +205,10 @@ function chromiumResolverRule(hostname: string, address: string): string {
 function looksBlocked(status: number, html: string): boolean {
   if (status !== 200) return true;
   const lower = html.toLowerCase();
-  return /just a moment|cf-chl|cf-browser-verification|cf-mitigated|enable javascript and cookies to continue|checking your browser|you have been blocked|have been blocked|sorry, you have been blocked|attention required|verify you are human|why am i seeing this|access denied|cloudflare/i.test(
+  // N.B. Do NOT match the bare word "cloudflare": legitimate job pages (Glints,
+  // Jobstreet) embed Cloudflare CDN scripts/links in their HTML, which would
+  // otherwise be misclassified as a block page. Only challenge markers count.
+  return /just a moment|cf-chl|cf-browser-verification|cf-mitigated|enable javascript and cookies to continue|checking your browser|you have been blocked|have been blocked|sorry, you have been blocked|attention required|verify you are human|why am i seeing this|access denied/i.test(
     lower,
   );
 }

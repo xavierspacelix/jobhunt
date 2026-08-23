@@ -472,7 +472,14 @@ test(
         skills: ["TypeScript"],
         externalJobId: suffix,
         companyDetails: { website: "https://example.test" },
+        forceSave: true,
       };
+      // The capture path now applies AI match gating (needsCv/review/save).
+      // Give the user a profile and force the save so the captured job is
+      // still persisted and can be asserted below.
+      await prisma.profile.create({
+        data: { userId: user.id, skills: ["TypeScript"] },
+      });
       const saved = await saveExtensionJob(
         extensionRequest("/api/extension/jobs", {
           method: "POST",

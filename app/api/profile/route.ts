@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCvUrl } from "@/lib/storage";
 import { parseProfileUpdate } from "@/lib/profile-input";
+import { encryptSecret } from "@/lib/crypto";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,14 @@ export const GET = auth(async (req) => {
   });
   const cvUrl = profile?.cvKey ? await getCvUrl(profile.cvKey) : null;
 
-  return Response.json({ profile, cvUrl });
+  const safeProfile = profile
+    ? (() => {
+        const { llmApiKey, ...rest } = profile;
+        return { ...rest, hasLlmApiKey: Boolean(llmApiKey) };
+      })()
+    : null;
+
+  return Response.json({ profile: safeProfile, cvUrl });
 });
 
 export const PUT = auth(async (req) => {
@@ -70,10 +78,17 @@ export const PUT = auth(async (req) => {
   }
   const data = parsed.data;
 
+  const llmApiKey =
+    data.llmApiKey !== undefined
+      ? data.llmApiKey
+        ? encryptSecret(data.llmApiKey)
+        : null
+      : undefined;
+
   const profile = await prisma.profile.upsert({
     where: { userId: user.id },
-    update: data,
-    create: { userId: user.id, ...data },
+    update: { ...data, llmApiKey },
+    create: { userId: user.id, ...data, llmApiKey },
   });
 
   const cvUrl = profile.cvKey ? await getCvUrl(profile.cvKey) : null;

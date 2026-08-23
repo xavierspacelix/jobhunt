@@ -1,5 +1,6 @@
-import { callChatJson } from "@/lib/llm";
+import { callChatJson, type LlmCredentials } from "@/lib/llm";
 import type { Job, Profile } from "@/lib/generated/prisma/client";
+import { decryptSecret } from "@/lib/crypto";
 import { z } from "zod";
 
 type ExperienceEntry = { role?: string; company?: string; period?: string };
@@ -84,12 +85,22 @@ export async function generateCoverLetter(
   const profileText = buildProfileText(profile);
   const jobText = buildJobText(job);
 
-  if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
+  const profileApiKey = profile.llmApiKey
+    ? decryptSecret(profile.llmApiKey)
+    : undefined;
+  const creds: LlmCredentials | undefined =
+    profileApiKey && profile.llmBaseUrl
+      ? { apiKey: profileApiKey, baseUrl: profile.llmBaseUrl, model: profile.llmModel ?? undefined }
+      : undefined;
+
+  if (creds || (process.env.LLM_API_KEY && process.env.LLM_BASE_URL)) {
     try {
       const system =
         'You are a professional cover letter writer helping Indonesian job seekers. Write a concise, formal cover letter in Bahasa Indonesia addressed to the hiring team. Use only facts present in the candidate profile and job details. Do not invent experience, skills, or metrics. Respond with STRICT JSON only, no prose, in this exact shape: {"coverLetter": string}.';
       const user = `Candidate profile:\n${profileText}\n\nJob:\n${jobText}\n\nWrite the cover letter and return it as JSON {"coverLetter": "..."}.`;
-      return parseCoverLetterLlmOutput(await callChatJson(system, user));
+      return parseCoverLetterLlmOutput(
+        await callChatJson(system, user, {}, creds),
+      );
     } catch (err) {
       console.error("[cover-letter] LLM failed, using heuristic", err);
     }

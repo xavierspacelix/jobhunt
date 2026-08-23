@@ -8,7 +8,10 @@ import { jobVisibilityWhere } from "@/lib/job-data";
 
 export const runtime = "nodejs";
 
-const input = z.object({ jobId: z.string().min(1) });
+const input = z.object({
+  jobId: z.string().min(1),
+  force: z.boolean().optional().default(false),
+});
 
 export const POST = auth(async (req) => {
   const email = req.auth?.user?.email;
@@ -21,7 +24,7 @@ export const POST = auth(async (req) => {
   if (!parsed.success) {
     return NextResponse.json({ error: "jobId wajib diisi" }, { status: 400 });
   }
-  const { jobId } = parsed.data;
+  const { jobId, force } = parsed.data;
 
   if (!matchRateLimit(email)) {
     return NextResponse.json(
@@ -64,7 +67,7 @@ export const POST = auth(async (req) => {
     where: { userId_jobId: { userId: user.id, jobId } },
   });
 
-  if (existing && existing.cacheKey === cacheKey) {
+  if (!force && existing && existing.cacheKey === cacheKey) {
     return NextResponse.json({
       score: existing.score,
       matchedSkills: existing.matchedSkills,

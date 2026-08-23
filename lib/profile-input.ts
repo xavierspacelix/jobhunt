@@ -54,6 +54,28 @@ export const profileUpdateSchema = z
       .array(z.string().trim().max(2000))
       .max(100)
       .transform((links) => links.filter(Boolean)),
+    llmBaseUrl: z
+      .preprocess(
+        (value) =>
+          typeof value === "string" && value.trim() === ""
+            ? undefined
+            : value,
+        z.string().trim().url("URL tidak valid").max(500).optional(),
+      ),
+    llmApiKey: z
+      .string()
+      .trim()
+      .max(2000)
+      .optional()
+      .transform((value) => (value === "" ? null : value)),
+    llmModel: z
+      .preprocess(
+        (value) =>
+          typeof value === "string" && value.trim() === ""
+            ? undefined
+            : value,
+        z.string().trim().max(200).optional(),
+      ),
   })
   .partial()
   .strict();

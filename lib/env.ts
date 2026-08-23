@@ -38,6 +38,7 @@ export const envSchema = z
     LLM_API_KEY: optionalString,
     LLM_MODEL: optionalString,
     LLM_TIMEOUT_MS: optionalPositiveInt,
+    APP_ENCRYPTION_KEY: optionalString,
     RATE_LIMIT_WINDOW_MS: optionalPositiveInt,
     RATE_LIMIT_MATCH_MAX: optionalPositiveInt,
     RATE_LIMIT_COVER_LETTER_MAX: optionalPositiveInt,
@@ -69,13 +70,6 @@ export const envSchema = z
       });
     }
 
-    if (Boolean(env.LLM_BASE_URL) !== Boolean(env.LLM_API_KEY)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: [env.LLM_BASE_URL ? "LLM_API_KEY" : "LLM_BASE_URL"],
-        message: "LLM_BASE_URL and LLM_API_KEY must be configured together",
-      });
-    }
     if (
       env.LLM_TIMEOUT_MS !== undefined &&
       (env.LLM_TIMEOUT_MS < 5_000 || env.LLM_TIMEOUT_MS > 300_000)
@@ -87,13 +81,7 @@ export const envSchema = z
       });
     }
 
-    const minioRequired = [
-      env.MINIO_ENDPOINT,
-      env.MINIO_ACCESS_KEY,
-      env.MINIO_SECRET_KEY,
-    ];
-    const configured = minioRequired.filter(Boolean).length;
-    if (configured > 0 && configured < minioRequired.length) {
+    if (env.MINIO_ENDPOINT && (!env.MINIO_ACCESS_KEY || !env.MINIO_SECRET_KEY)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["MINIO_ENDPOINT"],

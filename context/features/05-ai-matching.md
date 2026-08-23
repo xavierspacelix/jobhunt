@@ -8,10 +8,15 @@ Di detail Job/Application klik "Cek Kecocokan" -> badge score + chips.
 
 ## In Scope
 - POST `/api/match` `{jobId}` -> resolve profile dari session user
-- Skor via LLM (OpenAI-compatible, `LLM_BASE_URL`, JSON mode, temp 0.2)
-  bila `LLM_API_KEY`+`LLM_BASE_URL` ada; else heuristic (overlap
-  skill profil vs job.skills / scan deskripsi). Fallback otomatis bila
-  LLM error (sesuai pola CV extraction).
+- Skor via LLM (OpenAI-compatible, JSON mode, temp 0.2) memakai
+  **kredensial per-user** yang disimpan terenkripsi di `Profile`
+  (`llmBaseUrl`, `llmApiKey`, `llmModel`); fallback env global
+  (`LLM_BASE_URL`/`LLM_API_KEY`/`LLM_MODEL`) bersifat opsional. Bila
+  tidak ada kredensial sama sekali -> heuristic (overlap skill profil vs
+  job.skills / scan deskripsi). Fallback otomatis bila LLM error
+  (sesuai pola CV extraction).
+- Pengguna mengatur kredensial LLM sendiri di halaman **Settings**
+  (`/settings`); prompt setup muncul pasca-login bila belum diatur.
 - Simpan di model `Match`: score, matchedSkills, missingSkills, source, cacheKey.
 - Cache key includes Profile revision, prompt version, and relevant Job content.
 - Rate limit 10/min per user (OD-009).

@@ -21,17 +21,7 @@ import {
   Trash2Icon,
   EyeIcon,
   SparklesIcon,
-  CheckCircle2Icon,
-  XCircleIcon,
-  CircleIcon,
-  TriangleAlertIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  searchRunHasFailed,
-  searchRunHasWarnings,
-  type SearchEvent,
-} from "@/lib/job-search";
 import { MatchDialog } from "@/components/match-dialog";
 
 type Source = "GLINTS" | "JOBSTREET";
@@ -111,15 +101,6 @@ export function getExtensionHandoff(search: string): string | null {
   }
 }
 
-const LOCATION_CHIPS: { label: string; value: string }[] = [
-  { label: "Semua Indonesia", value: "" },
-  { label: "Jakarta", value: "Jakarta" },
-  { label: "Bandung", value: "Bandung" },
-  { label: "Surabaya", value: "Surabaya" },
-  { label: "Tangerang", value: "Tangerang" },
-  { label: "Remote", value: "Remote" },
-];
-
 interface CompanyDetails {
   name?: string | null;
   industry?: string | null;
@@ -180,76 +161,55 @@ interface SavedJob {
   matchScore?: number | null;
   matchedSkills?: string[];
   missingSkills?: string[];
-  origin?: "auto" | "manual" | "both";
+  origin?: "auto" | "manual" | "both" | "extension";
   tracked?: boolean;
 }
 
-interface ScrapeJobPayload {
-  title: string;
-  company: string;
-  location: string | null;
-  salary: string | null;
-  source: Source;
-  sourceUrl: string;
-  description: string | null;
-  postedAt: string | null;
-  employmentType: string | null;
-  experience: string | null;
-  education: string | null;
-  category: string | null;
-  recruiter: string | null;
-  skills: string[];
-  externalJobId: string | null;
-  shareToken: string | null;
-  companyRefId: string | null;
-  companyDetails: CompanyDetails | null;
-  previewToken: string;
-}
-
-interface ScrapeResult {
-  job: ScrapeJobPayload;
-  match: {
-    score: number;
-    matchedSkills: string[];
-    missingSkills: string[];
-    source: "ai";
-    profileRevision: string;
-  };
-}
-
-type SearchDoneEvent = Extract<SearchEvent, { type: "done" }>;
-
 function SourceBadge({ source }: { source: Source }) {
+  const color =
+    source === "GLINTS" ? "var(--color-success)" : "var(--color-info)";
   return (
     <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        source === "GLINTS"
-          ? "bg-accent/10 text-accent"
-          : "bg-secondary text-secondary-foreground",
-      )}
+      className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
+      style={{
+        color,
+        borderColor: color,
+        backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
+      }}
     >
       {source === "GLINTS" ? "Glints" : "Jobstreet"}
     </span>
   );
 }
 
-function OriginPill({ origin }: { origin?: "auto" | "manual" | "both" }) {
+function OriginPill({
+  origin,
+}: {
+  origin?: "auto" | "manual" | "both" | "extension";
+}) {
   if (!origin) return null;
+  const color =
+    origin === "extension"
+      ? "var(--color-warning)"
+      : origin === "auto" || origin === "both"
+        ? "var(--color-muted-status)"
+        : "var(--foreground)";
   return (
     <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-        origin === "auto" || origin === "both"
-          ? "bg-accent/10 text-accent"
-          : "bg-secondary text-secondary-foreground",
-      )}
+      className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+      style={{
+        color,
+        borderColor: color,
+        backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
+      }}
     >
-      {origin === "both"
-        ? "Manual + pencarian"
-        : origin === "auto"
-          ? "Pencarian"
-          : "Manual"}
+      {origin === "extension"
+        ? "Extension"
+        : origin === "both"
+          ? "Manual + pencarian"
+          : origin === "auto"
+            ? "Pencarian"
+            : "Manual"}
     </span>
   );
 }
@@ -311,6 +271,34 @@ function MatchScoreBlock({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function MatchScoreBadge({
+  score,
+}: {
+  score: number | null | undefined;
+}) {
+  if (score == null) {
+    return (
+      <span className="text-muted-foreground inline-flex items-center rounded-full border border-dashed px-2 py-0.5 text-xs font-medium">
+        Belum dimatch
+      </span>
+    );
+  }
+  const color = scoreColor(score);
+  return (
+    <span
+      className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums"
+      style={{
+        color,
+        borderColor: color,
+        backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+      }}
+      title="Skor kecocokan AI"
+    >
+      AI {score}
+    </span>
   );
 }
 
@@ -381,11 +369,7 @@ function JobSkeleton() {
   );
 }
 
-export function JobFetcher({
-  defaultKeywords,
-}: {
-  defaultKeywords?: string[];
-}) {
+export function JobFetcher() {
   const [url, setUrl] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -399,42 +383,29 @@ export function JobFetcher({
   );
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [detailJob, setDetailJob] = React.useState<SavedJob | null>(null);
-  const [tab, setTab] = React.useState<"saved" | "manual" | "scrape">("saved");
-  const [searchInput, setSearchInput] = React.useState(
-    defaultKeywords?.join(", ") ?? "",
-  );
-  const [location, setLocation] = React.useState("");
-  const [recommending, setRecommending] = React.useState(false);
-  const [recommendError, setRecommendError] = React.useState<string | null>(
-    null,
-  );
-  const [recommendSummary, setRecommendSummary] = React.useState("");
-  const [searching, setSearching] = React.useState(false);
-  const [searchLog, setSearchLog] = React.useState<
-    {
-      id: number;
-      message: string;
-      kind: "info" | "ok" | "error" | "warning" | "step";
-    }[]
-  >([]);
-  const [scrapeResults, setScrapeResults] = React.useState<ScrapeResult[]>([]);
-  const [scrapeSaveError, setScrapeSaveError] = React.useState<string | null>(
-    null,
-  );
-  const [savingKey, setSavingKey] = React.useState<string | null>(null);
-  const [savedKeys, setSavedKeys] = React.useState<string[]>([]);
+  const [tab, setTab] = React.useState<"saved" | "manual">("saved");
   const [jobsLoading, setJobsLoading] = React.useState(true);
   const [jobsError, setJobsError] = React.useState<string | null>(null);
-  const [searchAnnouncement, setSearchAnnouncement] = React.useState("");
-  const [searchCompleted, setSearchCompleted] = React.useState(false);
-  const [searchOutcome, setSearchOutcome] =
-    React.useState<SearchDoneEvent | null>(null);
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [pageLoading, setPageLoading] = React.useState(false);
+  const [sourceFilter, setSourceFilter] = React.useState("all");
+  const [matchFilter, setMatchFilter] = React.useState("all");
+  const [search, setSearch] = React.useState("");
+  const filtersRef = React.useRef({ source: "all", match: "all", q: "" });
+  const searchDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const handoffConsumed = React.useRef(false);
 
-  const loadJobs = React.useCallback(async () => {
+  const loadJobs = React.useCallback(async (nextPage = 1) => {
     setJobsError(null);
+    setPageLoading(true);
+    const f = filtersRef.current;
+    const query = new URLSearchParams({ page: String(nextPage), limit: "10" });
+    if (f.source && f.source !== "all") query.set("source", f.source);
+    if (f.match && f.match !== "all") query.set("match", f.match);
+    if (f.q) query.set("q", f.q);
     try {
-      const jobsRes = await fetch("/api/jobs");
+      const jobsRes = await fetch(`/api/jobs?${query.toString()}`);
       if (!jobsRes.ok) throw new Error("load failed");
       const jobsData = await jobsRes.json();
       const loadedJobs = (jobsData.jobs ?? []) as SavedJob[];
@@ -442,12 +413,39 @@ export function JobFetcher({
       setTrackedIds(
         loadedJobs.filter((job) => job.tracked).map((job) => job.id),
       );
+      setPage(nextPage);
+      setTotalPages(jobsData.totalPages ?? 1);
     } catch {
       setJobsError("Lowongan gagal dimuat. Periksa koneksi lalu coba lagi.");
     } finally {
+      setPageLoading(false);
       setJobsLoading(false);
     }
   }, []);
+
+  function changeSource(value: string) {
+    setSourceFilter(value);
+    filtersRef.current = { ...filtersRef.current, source: value };
+    setPage(1);
+    void loadJobs(1);
+  }
+
+  function changeMatch(value: string) {
+    setMatchFilter(value);
+    filtersRef.current = { ...filtersRef.current, match: value };
+    setPage(1);
+    void loadJobs(1);
+  }
+
+  function changeSearch(value: string) {
+    setSearch(value);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => {
+      filtersRef.current = { ...filtersRef.current, q: value.trim() };
+      setPage(1);
+      void loadJobs(1);
+    }, 300);
+  }
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -669,210 +667,6 @@ export function JobFetcher({
     }
   }
 
-  async function handleRecommend() {
-    if (recommending || searching) return;
-    setRecommending(true);
-    setRecommendError(null);
-    try {
-      const res = await fetch("/api/jobs/recommend-keywords", {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const recommendedKeywords = Array.isArray(data.keywords)
-          ? data.keywords.join(", ")
-          : "";
-        if (!recommendedKeywords) {
-          setRecommendError(
-            "AI tidak menghasilkan peran pencarian yang valid.",
-          );
-          return;
-        }
-        const recommendedLocation = location.trim()
-          ? location
-          : typeof data.location === "string"
-            ? data.location
-            : "";
-        setSearchInput(recommendedKeywords);
-        setLocation(recommendedLocation);
-        setRecommendSummary(data.summary ?? "");
-        setRecommending(false);
-        await runSearch(recommendedKeywords, recommendedLocation);
-      } else {
-        setRecommendError(data.error ?? "Gagal memuat rekomendasi");
-      }
-    } catch {
-      setRecommendError("Terjadi kesalahan saat memuat rekomendasi");
-    } finally {
-      setRecommending(false);
-    }
-  }
-
-  async function runSearch(
-    keywords = searchInput,
-    selectedLocation = location,
-  ) {
-    if (searching) return;
-    setSearching(true);
-    setSearchCompleted(false);
-    setSearchOutcome(null);
-    setSearchLog([]);
-    setScrapeResults([]);
-    setRecommendError(null);
-    setSearchAnnouncement("Menyiapkan pencarian lowongan.");
-    let logId = 0;
-    const push = (
-      message: string,
-      kind: "info" | "ok" | "error" | "warning" | "step" = "info",
-    ) => {
-      setSearchLog((prev) => [...prev, { id: logId++, message, kind }]);
-      setSearchAnnouncement(message);
-    };
-    let terminalReceived = false;
-
-    const applyEvent = (ev: SearchEvent) => {
-      switch (ev.type) {
-        case "start":
-          push("Memulai pencarian…", "step");
-          break;
-        case "search":
-        case "detail":
-          push(ev.message, "step");
-          break;
-        case "links":
-          push(ev.message, ev.failed ? "warning" : "info");
-          break;
-        case "result":
-          setScrapeResults((prev) => [
-            ...prev,
-            { job: ev.job as unknown as ScrapeJobPayload, match: ev.match },
-          ]);
-          setSearchAnnouncement(
-            `Lowongan ${ev.job.title} ditemukan dengan skor kecocokan ${ev.match.score} dari 100.`,
-          );
-          break;
-        case "done":
-          terminalReceived = true;
-          setSearchLog([
-            {
-              id: -1,
-              message: ev.message,
-              kind: searchRunHasFailed(ev)
-                ? "error"
-                : searchRunHasWarnings(ev)
-                  ? "warning"
-                  : "ok",
-            },
-          ]);
-          setSearchAnnouncement(ev.message);
-          setSearchOutcome(ev);
-          setSearchCompleted(true);
-          break;
-        case "error":
-          terminalReceived = true;
-          push(ev.message, "error");
-          break;
-      }
-    };
-
-    try {
-      const res = await fetch("/api/jobs/search", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          keywords,
-          location: selectedLocation,
-        }),
-      });
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => null);
-        push(data?.error ?? "Gagal memulai pencarian.", "error");
-        return;
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split("\n\n");
-        buf = parts.pop() ?? "";
-        for (const part of parts) {
-          const text = part.trim();
-          if (!text.startsWith("data:")) continue;
-          const json = text.slice(5).trim();
-          if (!json) continue;
-          let ev: SearchEvent;
-          try {
-            ev = JSON.parse(json) as SearchEvent;
-          } catch {
-            continue;
-          }
-          applyEvent(ev);
-        }
-      }
-      if (!terminalReceived) {
-        push("Pencarian terputus sebelum selesai. Coba lagi.", "error");
-      }
-    } catch {
-      push("Koneksi terputus saat mencari.", "error");
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  async function handleSaveScrape(r: ScrapeResult) {
-    const key = r.job.sourceUrl;
-    if (savedKeys.includes(key)) return;
-    setSavingKey(key);
-    setScrapeSaveError(null);
-    try {
-      const res = await fetch("/api/jobs/recommendations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ previewToken: r.job.previewToken }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setScrapeSaveError(data.error ?? "Gagal menyimpan lowongan");
-        return;
-      }
-      setSavedKeys((prev) => [...prev, key]);
-      await loadJobs();
-    } catch {
-      setScrapeSaveError("Terjadi kesalahan saat menyimpan lowongan.");
-    } finally {
-      setSavingKey(null);
-    }
-  }
-
-  const displayJobs = jobs;
-  const allAiScoringFailed = Boolean(
-    searchOutcome &&
-    searchOutcome.inspected > 0 &&
-    searchOutcome.aiFailures === searchOutcome.inspected,
-  );
-  const allSearchPagesFailed = Boolean(
-    searchOutcome &&
-    searchOutcome.searchPages > 0 &&
-    searchOutcome.searchFailures === searchOutcome.searchPages,
-  );
-  const allDetailFetchesFailed = Boolean(
-    searchOutcome &&
-    searchOutcome.details > 0 &&
-    searchOutcome.blocked === searchOutcome.details,
-  );
-  const allQualifiedResultsInvalid = Boolean(
-    searchOutcome &&
-    searchOutcome.results === 0 &&
-    (searchOutcome.invalid ?? 0) > 0,
-  );
-  const searchRunFailed =
-    allAiScoringFailed ||
-    allSearchPagesFailed ||
-    allDetailFetchesFailed ||
-    allQualifiedResultsInvalid;
   const cd = draft?.companyDetails;
   const companyRows = cd
     ? [
@@ -890,352 +684,6 @@ export function JobFetcher({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="border-border bg-card inline-flex flex-wrap gap-1 rounded-lg border p-1">
-        {(
-          [
-            ["saved", `Lowongan saya (${jobs.length})`],
-            ["manual", "Input Manual (Link)"],
-            ["scrape", "Cari (Scrape)"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            aria-pressed={tab === key}
-            className={cn(
-              "min-h-11 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              tab === key
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "scrape" && (
-        <section className="border-border bg-card rounded-xl border p-5 md:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-foreground text-lg font-semibold tracking-tight">
-                Cari Lowongan (Scrape)
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                Temukan lowongan terbaik dari seluruh profil CV Anda. AI menilai
-                maksimal 30 lowongan dan hanya menampilkan skor minimal 70.
-              </p>
-            </div>
-            <SparklesIcon className="text-accent size-10" />
-          </div>
-
-          <Button
-            variant="cta"
-            className="mt-4"
-            onClick={handleRecommend}
-            disabled={recommending || searching}
-          >
-            {recommending || searching ? (
-              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
-            ) : (
-              <SparklesIcon className="size-4" />
-            )}
-            {recommending
-              ? "Menganalisis CV…"
-              : searching
-                ? "Mencari dan menilai…"
-                : "Cari Rekomendasi Terbaik dari CV"}
-          </Button>
-          <p className="text-muted-foreground mt-2 text-xs">
-            AI only · skor minimal 70/100 · maksimal 30 lowongan · tidak
-            tersimpan otomatis
-          </p>
-          {recommendError && (
-            <p className="text-destructive mt-2 text-sm" role="alert">
-              {recommendError}
-            </p>
-          )}
-          {recommendSummary && (
-            <p className="bg-secondary text-secondary-foreground mt-3 rounded-md px-3 py-2 text-sm">
-              {recommendSummary}
-            </p>
-          )}
-
-          <div className="mt-4 flex flex-col gap-2">
-            <label
-              htmlFor="job-keywords"
-              className="text-foreground text-sm font-medium"
-            >
-              Kata kunci lowongan
-            </label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="job-keywords"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="mis. React, Node.js (skill/kata kunci)"
-                className="flex-1"
-                disabled={searching}
-              />
-              <Button
-                onClick={() => void runSearch()}
-                disabled={searching || !searchInput.trim()}
-              >
-                {searching ? (
-                  <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
-                ) : (
-                  <SearchIcon className="size-4" />
-                )}
-                {searching ? "Mencari…" : "Cari"}
-              </Button>
-            </div>
-          </div>
-
-          <p
-            className="sr-only"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {searchAnnouncement}
-          </p>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <label
-              htmlFor="job-location"
-              className="text-foreground text-sm font-medium"
-            >
-              Lokasi
-            </label>
-            <Input
-              id="job-location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="mis. Jakarta, Bandung, Remote"
-              className="flex-1"
-              disabled={searching}
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {LOCATION_CHIPS.map((chip) => {
-                const active = location === chip.value;
-                return (
-                  <button
-                    key={chip.label}
-                    type="button"
-                    onClick={() => setLocation(chip.value)}
-                    aria-pressed={active}
-                    disabled={searching}
-                    className={cn(
-                      "min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-colors",
-                      active
-                        ? "border-border bg-secondary text-foreground"
-                        : "border-border text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Hanya menampilkan lowongan ≤30 hari &amp; masih dibuka.
-            </p>
-          </div>
-
-          {searchLog.length > 0 && (
-            <div className="mt-4">
-              <span className="text-foreground text-sm font-medium">
-                Proses
-              </span>
-              <ul className="mt-2 space-y-1.5">
-                {searchLog.map((l) => (
-                  <li key={l.id} className="flex items-start gap-2 text-sm">
-                    <span className="mt-0.5 shrink-0">
-                      {l.kind === "ok" ? (
-                        <CheckCircle2Icon className="text-accent size-4" />
-                      ) : l.kind === "error" ? (
-                        <XCircleIcon className="text-destructive size-4" />
-                      ) : l.kind === "warning" ? (
-                        <TriangleAlertIcon
-                          className="size-4"
-                          style={{ color: "var(--color-warning)" }}
-                        />
-                      ) : searching ? (
-                        <Loader2Icon className="text-muted-foreground size-4 animate-spin motion-reduce:animate-none" />
-                      ) : (
-                        <CircleIcon className="text-muted-foreground size-4" />
-                      )}
-                    </span>
-                    <span
-                      className={
-                        l.kind === "error"
-                          ? "text-destructive"
-                          : l.kind === "warning"
-                            ? "text-foreground"
-                            : l.kind === "ok"
-                              ? "text-foreground"
-                              : "text-muted-foreground"
-                      }
-                    >
-                      {l.message}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {searchCompleted && scrapeResults.length === 0 && (
-            <div
-              className="border-border bg-background/40 mt-5 rounded-xl border border-dashed p-6 text-center"
-              role={searchRunFailed ? "alert" : "status"}
-            >
-              {searchRunFailed ? (
-                <XCircleIcon className="text-destructive mx-auto size-8" />
-              ) : (
-                <SearchIcon className="text-muted-foreground mx-auto size-8" />
-              )}
-              <p className="text-foreground mt-3 text-sm font-medium">
-                {allAiScoringFailed
-                  ? "AI gagal menilai semua lowongan"
-                  : allSearchPagesFailed
-                    ? "Portal lowongan tidak dapat dijangkau"
-                    : allDetailFetchesFailed
-                      ? "Detail lowongan tidak dapat diambil"
-                      : allQualifiedResultsInvalid
-                        ? "Hasil rekomendasi tidak valid"
-                        : "Belum ada lowongan dengan skor minimal 70"}
-              </p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {searchRunFailed
-                  ? "Coba lagi setelah beberapa saat. Tidak ada skor heuristik yang digunakan."
-                  : "Ubah lokasi atau peran pencarian, lalu coba lagi."}
-              </p>
-            </div>
-          )}
-
-          {scrapeResults.length > 0 && (
-            <div className="mt-5">
-              {scrapeSaveError ? (
-                <p className="text-destructive mb-3 text-sm" role="alert">
-                  {scrapeSaveError}
-                </p>
-              ) : null}
-              <span className="text-foreground text-sm font-medium">
-                Rekomendasi Terbaik ({scrapeResults.length})
-              </span>
-              <ul className="mt-2 flex flex-col gap-3">
-                {scrapeResults.map((r, index) => {
-                  const saved = savedKeys.includes(r.job.sourceUrl);
-                  const key = r.job.sourceUrl;
-                  return (
-                    <li
-                      key={key}
-                      className="border-border bg-card rounded-xl border p-4"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground font-mono text-xs tabular-nums">
-                              #{index + 1}
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {r.job.title}
-                            </span>
-                            <SourceBadge source={r.job.source} />
-                          </div>
-                          <p className="text-muted-foreground text-sm">
-                            {[r.job.company, r.job.location]
-                              .filter(Boolean)
-                              .join(" · ") || "—"}
-                            {r.job.salary ? ` · ${r.job.salary}` : ""}
-                          </p>
-                          <MatchScoreBlock
-                            score={r.match.score}
-                            matchedSkills={r.match.matchedSkills}
-                            missingSkills={r.match.missingSkills}
-                          />
-                          {r.job.skills.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {r.job.skills.slice(0, 8).map((s) => (
-                                <span
-                                  key={s}
-                                  className="bg-secondary text-secondary-foreground rounded-full px-2.5 py-0.5 text-xs"
-                                >
-                                  {s}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <a
-                            href={r.job.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-accent inline-flex min-h-11 items-center gap-1 text-sm hover:underline"
-                          >
-                            Buka <ExternalLinkIcon className="size-3.5" />
-                          </a>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Lihat detail"
-                            onClick={() =>
-                              setDetailJob({
-                                id: key,
-                                createdAt: r.job.postedAt ?? "",
-                                title: r.job.title,
-                                company: r.job.company,
-                                location: r.job.location,
-                                salary: r.job.salary,
-                                source: r.job.source,
-                                sourceUrl: r.job.sourceUrl,
-                                postedAt: r.job.postedAt,
-                                description: r.job.description ?? undefined,
-                                employmentType: r.job.employmentType,
-                                experience: r.job.experience,
-                                education: r.job.education,
-                                category: r.job.category,
-                                recruiter: r.job.recruiter,
-                                skills: r.job.skills,
-                                externalJobId: r.job.externalJobId,
-                                shareToken: r.job.shareToken,
-                                companyRefId: r.job.companyRefId,
-                                companyDetails: r.job.companyDetails,
-                              })
-                            }
-                          >
-                            <EyeIcon className="size-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSaveScrape(r)}
-                            disabled={saved || savingKey === key}
-                          >
-                            {savingKey === key ? (
-                              <Loader2Icon className="size-3.5 animate-spin motion-reduce:animate-none" />
-                            ) : (
-                              <SaveIcon className="size-3.5" />
-                            )}
-                            {saved
-                              ? "Tersimpan"
-                              : savingKey === key
-                                ? "Menyimpan…"
-                                : "Simpan"}
-                          </Button>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
-
       {tab === "manual" && (
         <>
           <form
@@ -1409,9 +857,42 @@ export function JobFetcher({
         </>
       )}
 
-      {tab === "saved" && (
-        <div>
-          {jobsError ? (
+       {tab === "saved" && (
+         <div>
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+             <div className="relative flex-1">
+               <SearchIcon className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
+               <Input
+                 value={search}
+                 onChange={(e) => changeSearch(e.target.value)}
+                 placeholder="Cari judul atau perusahaan"
+                 className="pl-8"
+                 aria-label="Cari lowongan"
+               />
+             </div>
+             <select
+               value={sourceFilter}
+               onChange={(e) => changeSource(e.target.value)}
+               className="border-border bg-card text-foreground rounded-md px-2 py-2 text-sm"
+               aria-label="Filter sumber"
+             >
+               <option value="all">Semua sumber</option>
+               <option value="GLINTS">Glints</option>
+               <option value="JOBSTREET">Jobstreet</option>
+             </select>
+             <select
+               value={matchFilter}
+               onChange={(e) => changeMatch(e.target.value)}
+               className="border-border bg-card text-foreground rounded-md px-2 py-2 text-sm"
+               aria-label="Filter skor AI"
+             >
+               <option value="all">Semua skor</option>
+               <option value="high">AI ≥ 70</option>
+               <option value="matched">Sudah ada match</option>
+               <option value="unmatched">Belum dimatch</option>
+             </select>
+           </div>
+           {jobsError ? (
             <div
               className="border-destructive/40 bg-destructive/10 text-destructive mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm"
               role="alert"
@@ -1426,13 +907,13 @@ export function JobFetcher({
               </Button>
             </div>
           ) : null}
-          {jobsLoading && displayJobs.length === 0 ? (
+          {jobsLoading && jobs.length === 0 ? (
             <ul className="flex flex-col gap-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <JobSkeleton key={i} />
               ))}
             </ul>
-          ) : displayJobs.length === 0 ? (
+          ) : jobs.length === 0 ? (
             <div className="border-border bg-card/50 flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
               <BriefcaseIcon className="text-muted-foreground size-8" />
               <p className="text-muted-foreground text-sm">
@@ -1440,51 +921,41 @@ export function JobFetcher({
               </p>
             </div>
           ) : (
-            <ul className="flex flex-col gap-3">
-              {displayJobs.map((job) => (
-                <li
-                  key={job.id}
-                  className="border-border bg-card rounded-xl border p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-foreground font-medium">
+            <ul className="divide-border border-border bg-card divide-y overflow-hidden rounded-xl border">
+              {jobs.map((job) => (
+                <li key={job.id} className="p-3 md:px-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-foreground truncate text-sm font-medium">
                           {job.title}
                         </span>
                         <SourceBadge source={job.source} />
                         <OriginPill origin={job.origin} />
+                        <MatchScoreBadge score={job.matchScore} />
                       </div>
-                      <p className="text-muted-foreground text-sm">
+                      <p className="text-muted-foreground truncate text-xs">
                         {[job.company, job.location]
                           .filter(Boolean)
                           .join(" · ") || "—"}
                         {job.salary ? ` · ${job.salary}` : ""}
+                        {job.postedAt
+                          ? ` · ${new Date(job.postedAt).toLocaleDateString("id-ID")}`
+                          : ""}
                       </p>
-                      {job.postedAt && (
-                        <p className="text-muted-foreground text-xs">
-                          Diposting{" "}
-                          {new Date(job.postedAt).toLocaleDateString("id-ID")}
-                        </p>
-                      )}
-                      {job.matchScore != null ? (
-                        <MatchScoreBlock
-                          score={job.matchScore}
-                          matchedSkills={job.matchedSkills}
-                          missingSkills={job.missingSkills}
-                        />
-                      ) : null}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1">
                       {trackedIds.includes(job.id) ? (
-                        <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                        <span className="text-muted-foreground mr-1 inline-flex items-center gap-1 text-xs">
                           <ListChecksIcon className="size-3.5" />
                           Di tracker
                         </span>
                       ) : (
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
+                          className="size-11 md:size-9"
+                          aria-label="Tambahkan ke tracker"
                           onClick={() => handleAddToTracker(job.id)}
                           disabled={addingId === job.id}
                         >
@@ -1493,43 +964,32 @@ export function JobFetcher({
                           ) : (
                             <ListChecksIcon className="size-3.5" />
                           )}
-                          {addingId === job.id ? "Menambahkan…" : "Tracker"}
                         </Button>
                       )}
                       <a
                         href={job.sourceUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-accent inline-flex min-h-11 items-center gap-1 text-sm hover:underline"
+                        className="text-accent hover:bg-muted inline-flex size-11 items-center justify-center rounded-md transition-colors motion-reduce:transition-none md:size-9"
+                        aria-label={`Buka ${job.title} di situs sumber`}
                       >
-                        Buka <ExternalLinkIcon className="size-3.5" />
+                        <ExternalLinkIcon className="size-4" />
                       </a>
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="Lihat detail"
+                        className="size-11 md:size-9"
+                        aria-label={`Lihat detail ${job.title}`}
                         onClick={() => setDetailJob(job)}
                       >
                         <EyeIcon className="size-4" />
                       </Button>
-                      <MatchDialog
-                        jobId={job.id}
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-accent hover:text-accent gap-1"
-                          >
-                            <SparklesIcon className="size-3.5" />
-                            Cek
-                          </Button>
-                        }
-                      />
                       {!job.origin ? null : confirmDeleteId === job.id ? (
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="min-h-11 md:min-h-9"
                             onClick={() => setConfirmDeleteId(null)}
                             disabled={deletingId === job.id}
                           >
@@ -1538,7 +998,7 @@ export function JobFetcher({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive min-h-11 md:min-h-9"
                             onClick={() => handleDeleteJob(job.id)}
                             disabled={deletingId === job.id}
                           >
@@ -1552,6 +1012,7 @@ export function JobFetcher({
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="size-11 md:size-9"
                           aria-label="Hapus lowongan"
                           onClick={() => setConfirmDeleteId(job.id)}
                           disabled={deletingId === job.id}
@@ -1565,6 +1026,34 @@ export function JobFetcher({
               ))}
             </ul>
           )}
+
+          {totalPages > 1 ? (
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <p className="text-muted-foreground text-xs">
+                Halaman {page} dari {totalPages}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11 md:min-h-9"
+                  disabled={page <= 1 || pageLoading}
+                  onClick={() => void loadJobs(page - 1)}
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11 md:min-h-9"
+                  disabled={page >= totalPages || pageLoading}
+                  onClick={() => void loadJobs(page + 1)}
+                >
+                  Berikutnya
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -1633,6 +1122,30 @@ function JobDetailSheet({
                     <Row key={r.label} label={r.label} value={r.value} />
                   ))}
                 </dl>
+              </Section>
+
+              <Section title="AI Match">
+                {job.matchScore != null ? (
+                  <MatchScoreBlock
+                    score={job.matchScore}
+                    matchedSkills={job.matchedSkills}
+                    missingSkills={job.missingSkills}
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Lowongan ini belum memiliki hasil AI match.
+                  </p>
+                )}
+                <MatchDialog
+                  jobId={job.id}
+                  forceRefresh={job.matchScore != null}
+                  trigger={
+                    <Button variant="outline" size="sm" className="mt-3 min-h-11">
+                      <SparklesIcon className="size-4" />
+                      {job.matchScore == null ? "Cek AI match" : "Cek ulang AI match"}
+                    </Button>
+                  }
+                />
               </Section>
 
               {job.skills && job.skills.length > 0 && (

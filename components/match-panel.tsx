@@ -22,10 +22,12 @@ function scoreColor(score: number): string {
 export function MatchPanel({
   jobId,
   autoRun = false,
+  forceRefresh = false,
   onComplete,
 }: {
   jobId: string;
   autoRun?: boolean;
+  forceRefresh?: boolean;
   onComplete?: (result: MatchResponse) => void;
 }) {
   const [state, setState] = React.useState<
@@ -35,18 +37,18 @@ export function MatchPanel({
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (autoRun) check();
+    if (autoRun) check(forceRefresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRun]);
+  }, [autoRun, forceRefresh]);
 
-  async function check() {
+  async function check(force = false) {
     setState("loading");
     setError(null);
     try {
       const res = await fetch("/api/match", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({ jobId, force }),
       });
       const data = await res.json().catch(() => null);
       if (res.status === 400) {
@@ -78,7 +80,11 @@ export function MatchPanel({
   return (
     <div>
       {state === "idle" && (
-        <Button variant="outline" size="sm" onClick={check}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => check(forceRefresh)}
+        >
           Cek Kecocokan
         </Button>
       )}
@@ -102,7 +108,11 @@ export function MatchPanel({
             </Link>
           )}
           <div>
-            <Button variant="outline" size="sm" onClick={check}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => check(forceRefresh)}
+            >
               Coba lagi
             </Button>
           </div>
@@ -183,7 +193,7 @@ export function MatchPanel({
             </div>
           )}
 
-          <Button variant="ghost" size="sm" onClick={check}>
+          <Button variant="ghost" size="sm" onClick={() => check(true)}>
             Hitung ulang
           </Button>
         </div>

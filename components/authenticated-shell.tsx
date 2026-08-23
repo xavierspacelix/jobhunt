@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AiSetupPrompt } from "@/components/ai-setup-prompt";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -60,6 +61,7 @@ export function AuthenticatedShell({
         <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-1 flex-col gap-6 p-4 md:p-6">
           {children}
         </div>
+        <AiSetupPrompt />
       </SidebarInset>
     </SidebarProvider>
   );

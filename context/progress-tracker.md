@@ -36,7 +36,10 @@ deferred under OD-003 and is not represented as delivered.
 - Credentials auth with JWT; Google/email magic link deferred.
 - PostgreSQL only, supplied externally by `DATABASE_URL`.
 - MinIO stores CV blobs; UUID local fallback is persisted by the Compose volume.
-- AI uses a provider-agnostic OpenAI-compatible endpoint and heuristic fallback.
+- AI uses a provider-agnostic OpenAI-compatible endpoint with **per-user
+  credentials** (encrypted on `Profile`: `llmBaseUrl`/`llmApiKey`/`llmModel`;
+  optional global env fallback) and heuristic fallback. Users configure LLM in
+  **Settings** (`/settings`); a post-login prompt appears when unconfigured.
 - Paste-URL and on-demand search use native fetch with local Playwright fallback.
 - Feature 08 has no cron: search streams previews, then user explicitly saves a
   selected result as a Recommendation.
@@ -57,7 +60,7 @@ Full outcomes: `open-decisions.md`. Current implementation: `architecture.md`.
 - OD-003: sender domain/key required before email sending can be promoted.
 - Feature 08 live end-to-end needs deployed Docker + reachable PostgreSQL +
   external network access to Glints/Jobstreet.
-- Verified: lint, typecheck, and build pass; 103/103 tests in 16 files pass with
+- Verified: lint, typecheck, build pass; 99 pass / 4 skipped tests with
   `RUN_DB_TESTS=1`; Prisma validate/status and extension ZIP integrity pass.
 - Docker command is unavailable locally, so no image smoke is claimed. There is
   no format gate or browser E2E suite.

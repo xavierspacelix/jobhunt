@@ -395,6 +395,88 @@ input[type="url"] {
   accent-color: var(--accent);
 }
 
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.tab {
+  flex: 1 1 0;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.tab[aria-pressed="true"] {
+  color: var(--accent-foreground);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.listing-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--card);
+  padding: 14px;
+}
+
+.listing-panel h2 {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.listing-results {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.listing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 10px;
+  background: var(--secondary);
+  padding: 8px 10px;
+}
+
+.listing-row-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-row-state {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.notice[hidden],
+.listing-panel[hidden],
+.auth-panel[hidden],
+.account-panel[hidden],
+.preview[hidden] {
+  display: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .button,
   .text-button,
